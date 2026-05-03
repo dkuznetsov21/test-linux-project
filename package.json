@@ -1,0 +1,14 @@
+{
+  "name": "dasha-project",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate:baza": "node scripts/generate-baza.mjs",
+    "check": "node --check scripts/generate-baza.mjs"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^9.9.0",
+    "world-countries": "^5.1.0"
+  }
+}

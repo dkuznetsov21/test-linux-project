@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Generated output and runtime logs
+outputs/
+prompt-usage-log.txt
+agent-output.log
+*.log
+scripts/[0-9][0-9][0-9][0-9]-*.txt
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
