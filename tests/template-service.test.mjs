@@ -46,19 +46,19 @@ test('renderTemplate rejects empty required values', () => {
 });
 
 test('chunkArray splits domains by prompt batch size', () => {
-  assert.deepEqual(chunkArray(['a', 'b'], 15), [['a', 'b']]);
+  assert.deepEqual(chunkArray(['a', 'b'], 30), [['a', 'b']]);
   assert.deepEqual(
-    chunkArray(Array.from({ length: 16 }, (_, index) => `d${index + 1}`), 15).map((chunk) => chunk.length),
-    [15, 1],
+    chunkArray(Array.from({ length: 31 }, (_, index) => `d${index + 1}`), 30).map((chunk) => chunk.length),
+    [30, 1],
   );
   assert.deepEqual(
-    chunkArray(Array.from({ length: 31 }, (_, index) => `d${index + 1}`), 15).map((chunk) => chunk.length),
-    [15, 15, 1],
+    chunkArray(Array.from({ length: 61 }, (_, index) => `d${index + 1}`), 30).map((chunk) => chunk.length),
+    [30, 30, 1],
   );
 });
 
 test('assignPromptBatches does not repeat prompt files in adjacent batches', () => {
-  const domains = Array.from({ length: 31 }, (_, index) => `domain-${index + 1}.com`);
+  const domains = Array.from({ length: 61 }, (_, index) => `domain-${index + 1}.com`);
   const promptFiles = [
     { promptFileName: 'a.txt', finalPrompt: 'A', promptPath: '/prompts/a.txt' },
     { promptFileName: 'b.txt', finalPrompt: 'B', promptPath: '/prompts/b.txt' },
@@ -67,13 +67,13 @@ test('assignPromptBatches does not repeat prompt files in adjacent batches', () 
     random: () => 0,
   });
 
-  assert.deepEqual(batches.map((batch) => batch.domains.length), [15, 15, 1]);
+  assert.deepEqual(batches.map((batch) => batch.domains.length), [30, 30, 1]);
   assert.notEqual(batches[0].promptFileName, batches[1].promptFileName);
   assert.notEqual(batches[1].promptFileName, batches[2].promptFileName);
 });
 
 test('assignPromptBatches rejects multiple batches with only one prompt file', () => {
-  const domains = Array.from({ length: 16 }, (_, index) => `domain-${index + 1}.com`);
+  const domains = Array.from({ length: 31 }, (_, index) => `domain-${index + 1}.com`);
   const promptFiles = [
     { promptFileName: 'only.txt', finalPrompt: 'Only', promptPath: '/prompts/only.txt' },
   ];

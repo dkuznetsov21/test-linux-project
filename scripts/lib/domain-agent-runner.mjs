@@ -36,6 +36,20 @@ export async function findDomainPromptJobs(outputDirectory) {
     .sort((first, second) => first.domain.localeCompare(second.domain));
 }
 
+export function buildAgentPrompt(job, prompt) {
+  return [
+    'RUNTIME STRUCTURE RULES:',
+    `- You are already running inside the outer folder for exactly one domain: ${job.domain}.`,
+    `- Treat any instruction that says /${job.domain} as this current working directory, not as a new absolute folder to create.`,
+    `- Do not create folders for any other domains inside ${job.domain}.`,
+    `- The only nested domain-named folder allowed here is ./${job.domain}/, and it must contain the final production build after dist is renamed.`,
+    '- Keep source files, package.json, configs, public/, src/, node_modules/, promt.txt, and agent-output.log in the current outer domain folder.',
+    '',
+    'ORIGINAL PROMPT:',
+    prompt,
+  ].join('\n');
+}
+
 export class ProgressReporter {
   constructor(total, output = process.stdout, intervalMilliseconds = 30000) {
     this.total = total;
@@ -116,7 +130,8 @@ export class DomainAgentRunner {
       }
 
       const startedAt = new Date().toISOString();
-      const args = [...AGENT_ARGS_PREFIX, prompt];
+      const agentPrompt = buildAgentPrompt(job, prompt);
+      const args = [...AGENT_ARGS_PREFIX, agentPrompt];
 
       try {
         await fs.writeFile(job.logPath, [

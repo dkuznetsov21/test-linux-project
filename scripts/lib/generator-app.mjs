@@ -99,7 +99,17 @@ export class BazaGeneratorApp {
       this.output.write('Starting Codex...\n');
 
       await this.runCodex(outputDirectory);
-      this.output.write('Codex completed. Starting domain agent runs.\n');
+      this.output.write('Codex completed. Validating domain prompt folders.\n');
+
+      const promptFolderSummary = await this.outputValidator.validatePromptFolders(outputDirectory, values.domains);
+
+      if (!promptFolderSummary.ok) {
+        process.exitCode = 1;
+        this.output.write('Codex output folder validation failed. Script finished.\n');
+        return;
+      }
+
+      this.output.write('Domain prompt folders valid. Starting domain agent runs.\n');
 
       const agentSummary = await this.createAgentRunner().run(outputDirectory);
       const validationSummary = await this.outputValidator.validate(outputDirectory);

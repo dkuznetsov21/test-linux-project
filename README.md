@@ -41,7 +41,7 @@ The generator asks for:
 
 For multi-line inputs, paste the text and press `Enter` on an empty line to finish that section.
 
-The final prompt is not entered in the terminal. The script reads `.txt` files from `prompts/`, splits domains into groups of 15, and randomly assigns one prompt file to each group.
+The final prompt is not entered in the terminal. The script reads `.txt` files from `prompts/`, splits domains into groups of 30, and randomly assigns one prompt file to each group.
 
 Example prompt file:
 
@@ -49,7 +49,7 @@ Example prompt file:
 prompts/v58fin-acid-pop.txt
 ```
 
-You can keep several `.txt` prompt files in `prompts/`. Adjacent domain groups will not use the same prompt file. If more than 15 domains are entered, at least 2 prompt files are required.
+You can keep several `.txt` prompt files in `prompts/`. Adjacent domain groups will not use the same prompt file. If more than 30 domains are entered, at least 2 prompt files are required.
 
 If the folder has zero `.txt` files, the script stops with an error.
 
@@ -111,7 +111,7 @@ baza.txt
 prompt-usage.txt
 ```
 
-The `baza.txt` file is rendered from `scripts/baza.txt`. For every 15 domains, the script renders a separate template section with that group's domains, addresses, and selected final prompt.
+The `baza.txt` file is rendered from `scripts/baza.txt`. For every 30 domains, the script renders a separate template section with that group's domains, addresses, and selected final prompt.
 
 The script also appends a run record in the project root:
 
@@ -135,7 +135,7 @@ The Codex task text is:
 complete this promt in file baza.txt
 ```
 
-The script waits until Codex finishes. Codex is expected to create one folder per domain inside the generated output folder, with a `promt.txt` file inside each domain folder.
+The script waits until Codex finishes. Codex is expected to create exactly one folder per input domain inside the generated output folder, with a `promt.txt` file inside each domain folder. The script validates that the top-level domain folders exactly match the input domains before starting domain agents.
 
 After Codex finishes, the script automatically runs Cursor Agent for every domain folder that contains `promt.txt`:
 
@@ -182,7 +182,7 @@ vercel.json
 vite.config.ts
 ```
 
-Extra files, such as `agent-output.log`, are allowed. If any required folder or file is missing, the script prints the missing items and exits with code `1`.
+The nested `<domain>/` folder is the final production build for that same domain. Other domain-named folders inside a domain folder are invalid. Extra files, such as `agent-output.log`, are allowed. If any required folder or file is missing, the script prints the missing items and exits with code `1`.
 
 ## Template Placeholders
 

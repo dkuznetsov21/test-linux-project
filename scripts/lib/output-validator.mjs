@@ -24,9 +24,58 @@ async function pathExistsAsType(targetPath, expectedType) {
   }
 }
 
+function sortValues(values) {
+  return [...values].sort((first, second) => first.localeCompare(second));
+}
+
+function isDomainLikeDirectoryName(name) {
+  return /^[^\s./\\][^\s/\\]*\.[^\s/\\]+$/.test(name);
+}
+
 export class OutputValidator {
   constructor(output = process.stdout) {
     this.output = output;
+  }
+
+  async validatePromptFolders(outputDirectory, expectedDomains) {
+    const entries = await fs.readdir(outputDirectory, { withFileTypes: true });
+    const topLevelDirectories = entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    const jobs = await findDomainPromptJobs(outputDirectory);
+    const actualPromptDomains = new Set(jobs.map((job) => job.domain));
+    const expectedDomainSet = new Set(expectedDomains);
+    const missingDirectories = sortValues(expectedDomains.filter((domain) => !topLevelDirectories.includes(domain)));
+    const missingPrompts = sortValues(expectedDomains.filter((domain) => (
+      topLevelDirectories.includes(domain) && !actualPromptDomains.has(domain)
+    )));
+    const unexpectedDirectories = sortValues(topLevelDirectories.filter((domain) => !expectedDomainSet.has(domain)));
+    const ok = missingDirectories.length === 0
+      && missingPrompts.length === 0
+      && unexpectedDirectories.length === 0;
+
+    if (!ok) {
+      this.output.write('\nDomain prompt folder validation failed:\n');
+
+      if (missingDirectories.length > 0) {
+        this.output.write(`Missing domain folders: ${missingDirectories.join(', ')}\n`);
+      }
+
+      if (missingPrompts.length > 0) {
+        this.output.write(`Missing promt.txt files: ${missingPrompts.join(', ')}\n`);
+      }
+
+      if (unexpectedDirectories.length > 0) {
+        this.output.write(`Unexpected domain folders: ${unexpectedDirectories.join(', ')}\n`);
+      }
+    }
+
+    return {
+      missingDirectories,
+      missingPrompts,
+      ok,
+      unexpectedDirectories,
+    };
   }
 
   async validateDomainOutput(job) {
@@ -45,7 +94,18 @@ export class OutputValidator {
       return exists ? null : fileName;
     });
 
-    const missing = (await Promise.all([...directoryChecks, ...fileChecks])).filter(Boolean);
+    const nestedEntries = await fs.readdir(job.domainDirectory, { withFileTypes: true });
+    const unexpectedNestedDomainFolders = nestedEntries
+      .filter((entry) => (
+        entry.isDirectory()
+        && entry.name !== job.domain
+        && isDomainLikeDirectoryName(entry.name)
+      ))
+      .map((entry) => `unexpected ${entry.name}/`);
+    const missing = [
+      ...(await Promise.all([...directoryChecks, ...fileChecks])).filter(Boolean),
+      ...unexpectedNestedDomainFolders,
+    ];
 
     return {
       ...job,
