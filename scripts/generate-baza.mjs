@@ -111,7 +111,12 @@ const CODEX_ARGS = [
   CODEX_PROMPT,
 ];
 const PROMPT_USAGE_LOG_FILE = 'prompt-usage-log.txt';
-const AGENT_CONCURRENCY_LIMIT = 10;
+const AGENT_CONCURRENCY_ENV = 'AGENT_CONCURRENCY';
+const DEFAULT_AGENT_CONCURRENCY_LIMIT = 15;
+const AGENT_CONCURRENCY_LIMIT = parsePositiveInteger(
+  process.env[AGENT_CONCURRENCY_ENV],
+  DEFAULT_AGENT_CONCURRENCY_LIMIT,
+);
 const AGENT_OUTPUT_LOG_FILE = 'agent-output.log';
 const AGENT_ARGS_PREFIX = ['--print', '--force', '--trust'];
 const REQUIRED_DOMAIN_DIRECTORIES = [
@@ -132,6 +137,20 @@ const REQUIRED_DOMAIN_FILES = [
   'vercel.json',
   'vite.config.ts',
 ];
+
+function parsePositiveInteger(value, fallback) {
+  if (value === undefined || value === '') {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${AGENT_CONCURRENCY_ENV} must be a positive integer`);
+  }
+
+  return parsed;
+}
 
 function sanitizeInput(value) {
   return value
@@ -483,6 +502,19 @@ function runAgentJob(job) {
   });
 }
 
+function formatDuration(milliseconds) {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+  }
+
+  return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+}
+
 async function runWithConcurrency(items, limit, worker) {
   const results = new Array(items.length);
   let nextIndex = 0;
@@ -511,13 +543,51 @@ async function runDomainAgents(outputDirectory) {
   process.stdout.write(`Found domain prompt files: ${jobs.length}\n`);
   process.stdout.write(`Starting Cursor Agent runs with max concurrency ${AGENT_CONCURRENCY_LIMIT}...\n`);
 
-  const results = await runWithConcurrency(jobs, AGENT_CONCURRENCY_LIMIT, async (job) => {
-    process.stdout.write(`[agent] Starting ${job.domain}\n`);
-    const result = await runAgentJob(job);
-    process.stdout.write(`[agent] ${result.ok ? 'Completed' : 'Failed'} ${job.domain}\n`);
+  const startedAt = Date.now();
+  const progress = {
+    active: 0,
+    completed: 0,
+    failed: 0,
+    succeeded: 0,
+  };
 
-    return result;
-  });
+  function writeProgress() {
+    const queued = Math.max(jobs.length - progress.completed - progress.active, 0);
+    process.stdout.write(
+      `[agent] Progress: ${progress.completed}/${jobs.length} completed ` +
+      `(${progress.succeeded} ok, ${progress.failed} failed), ` +
+      `${progress.active} active, ${queued} queued, elapsed ${formatDuration(Date.now() - startedAt)}\n`,
+    );
+  }
+
+  const progressTimer = setInterval(writeProgress, 30000);
+
+  const results = await (async () => {
+    try {
+      return await runWithConcurrency(jobs, AGENT_CONCURRENCY_LIMIT, async (job) => {
+        progress.active += 1;
+        process.stdout.write(`[agent] Starting ${job.domain}\n`);
+        const result = await runAgentJob(job);
+        progress.active -= 1;
+        progress.completed += 1;
+
+        if (result.ok) {
+          progress.succeeded += 1;
+        } else {
+          progress.failed += 1;
+        }
+
+        process.stdout.write(`[agent] ${result.ok ? 'Completed' : 'Failed'} ${job.domain}\n`);
+        writeProgress();
+
+        return result;
+      });
+    } finally {
+      clearInterval(progressTimer);
+    }
+  })();
+
+  writeProgress();
 
   const successes = results.filter((result) => result.ok);
   const failures = results.filter((result) => !result.ok);

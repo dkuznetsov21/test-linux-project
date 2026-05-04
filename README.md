@@ -142,7 +142,13 @@ After Codex finishes, the script automatically runs Cursor Agent for every domai
 agent --print --force --trust "<content of promt.txt>"
 ```
 
-The script runs up to 10 domain agents at the same time. When one finishes, the next queued domain starts.
+The script runs up to 15 domain agents at the same time by default. When one finishes, the next queued domain starts.
+
+You can override the parallel agent limit for one run:
+
+```bash
+AGENT_CONCURRENCY=30 npm run generate:baza
+```
 
 For every domain, agent output is written to:
 
@@ -151,6 +157,8 @@ agent-output.log
 ```
 
 inside that domain folder.
+
+While domain agents are running, the script prints progress every 30 seconds and after each completed domain. The progress line includes completed domains, succeeded/failed counts, active runs, queued domains, and elapsed time.
 
 The script continues running the remaining domains even if one domain agent fails. At the end it prints a summary. If every domain succeeds, it prints `All agent runs completed. Script finished.`. If any domain fails, it prints the failed domains and exits with code `1`.
 
