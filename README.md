@@ -224,3 +224,9 @@ outputs/DA DD.MM NZ (Test topic)/baza.txt
 ```bash
 npm run check
 ```
+
+Run the focused automated tests:
+
+```bash
+npm test
+```

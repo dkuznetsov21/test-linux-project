@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "generate:baza": "node scripts/generate-baza.mjs",
-    "check": "node --check scripts/generate-baza.mjs"
+    "check": "node --check scripts/generate-baza.mjs",
+    "test": "node --test"
   },
   "dependencies": {
     "@faker-js/faker": "^9.9.0",
