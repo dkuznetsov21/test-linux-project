@@ -2,7 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAddressBlock } from './address-generator.mjs';
-import { CODEX_ARGS } from './config.mjs';
+import {
+  CODEX_ARGS,
+  PROMPT_DOMAIN_BATCH_SIZE,
+} from './config.mjs';
 import { DomainAgentRunner } from './domain-agent-runner.mjs';
 import { InputSession } from './input-session.mjs';
 import {
@@ -15,8 +18,10 @@ import { OutputValidator } from './output-validator.mjs';
 import { runCommand } from './process-runner.mjs';
 import {
   appendPromptUsageLog,
-  readFinalPrompt,
-  renderTemplate,
+  assignPromptBatches,
+  readPromptFiles,
+  renderBatchedTemplate,
+  writeOutputPromptUsage,
 } from './template-service.mjs';
 
 export class BazaGeneratorApp {
@@ -58,32 +63,36 @@ export class BazaGeneratorApp {
     const templatePath = path.join(this.projectDirectory, 'scripts', 'baza.txt');
     const outputsDirectory = path.join(this.projectDirectory, 'outputs');
     const template = await fs.readFile(templatePath, 'utf8');
-    const { finalPrompt, promptFileName, promptPath } = await readFinalPrompt(this.projectDirectory);
 
     try {
       const values = await this.collectInput();
-      const addressBlock = buildAddressBlock(values.domains, values.geo);
+      const promptFiles = await readPromptFiles(this.projectDirectory);
+      const promptBatches = assignPromptBatches(values.domains, promptFiles);
+      const addressBlockByBatch = new Map(promptBatches.map((batch) => [
+        batch.batchNumber,
+        buildAddressBlock(batch.domains, values.geo),
+      ]));
       const outputDirectory = path.join(outputsDirectory, buildOutputDirectoryName(values));
       const outputPath = path.join(outputDirectory, 'baza.txt');
-      const rendered = renderTemplate(template, {
-        DOMAINS: values.domains.join('\n'),
-        GEO: values.geo,
-        LANGUAGE: values.language,
-        TOPIC: values.topic,
-        ADDRESS_BLOCK: addressBlock,
-        FINAL_PROMPT: finalPrompt,
-      });
+      const rendered = renderBatchedTemplate(template, {
+        ...values,
+        addressBlockByBatch,
+      }, promptBatches);
+
+      const promptUsageValues = {
+        batchSize: PROMPT_DOMAIN_BATCH_SIZE,
+        outputDirectory,
+        promptBatches,
+      };
 
       await fs.mkdir(outputDirectory, { recursive: true });
       await fs.writeFile(outputPath, rendered, 'utf8');
-      const promptUsageLogPath = await appendPromptUsageLog(this.projectDirectory, {
-        domains: values.domains,
-        outputDirectory,
-        promptFileName,
-      });
+      const outputPromptUsagePath = await writeOutputPromptUsage(outputDirectory, promptUsageValues);
+      const promptUsageLogPath = await appendPromptUsageLog(this.projectDirectory, promptUsageValues);
 
       this.output.write(`\nGenerated file: ${outputPath}\n`);
-      this.output.write(`Prompt file: ${promptPath}\n`);
+      this.output.write(`Prompt batches: ${promptBatches.length}\n`);
+      this.output.write(`Prompt usage file: ${outputPromptUsagePath}\n`);
       this.output.write(`Prompt usage log: ${promptUsageLogPath}\n`);
       this.output.write(`Domains: ${values.domains.length}\n`);
       this.output.write(`Codex command: codex ${CODEX_ARGS.map((arg) => JSON.stringify(arg)).join(' ')}\n`);

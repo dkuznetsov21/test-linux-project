@@ -19,6 +19,8 @@ export const CODEX_ARGS = [
 ];
 
 export const PROMPT_USAGE_LOG_FILE = 'prompt-usage-log.txt';
+export const OUTPUT_PROMPT_USAGE_FILE = 'prompt-usage.txt';
+export const PROMPT_DOMAIN_BATCH_SIZE = 15;
 export const AGENT_CONCURRENCY_ENV = 'AGENT_CONCURRENCY';
 export const DEFAULT_AGENT_CONCURRENCY_LIMIT = 15;
 export const AGENT_OUTPUT_LOG_FILE = 'agent-output.log';

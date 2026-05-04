@@ -41,7 +41,7 @@ The generator asks for:
 
 For multi-line inputs, paste the text and press `Enter` on an empty line to finish that section.
 
-The final prompt is not entered in the terminal. The script randomly selects one `.txt` file from `prompts/`, reads the full text from that file, and inserts it into `baza.txt`.
+The final prompt is not entered in the terminal. The script reads `.txt` files from `prompts/`, splits domains into groups of 15, and randomly assigns one prompt file to each group.
 
 Example prompt file:
 
@@ -49,7 +49,7 @@ Example prompt file:
 prompts/v58fin-acid-pop.txt
 ```
 
-You can keep several `.txt` prompt files in `prompts/`. For one generator run, all domains use the same selected prompt file.
+You can keep several `.txt` prompt files in `prompts/`. Adjacent domain groups will not use the same prompt file. If more than 15 domains are entered, at least 2 prompt files are required.
 
 If the folder has zero `.txt` files, the script stops with an error.
 
@@ -108,9 +108,10 @@ Inside that folder it creates:
 
 ```text
 baza.txt
+prompt-usage.txt
 ```
 
-The `baza.txt` file is rendered from `scripts/baza.txt`.
+The `baza.txt` file is rendered from `scripts/baza.txt`. For every 15 domains, the script renders a separate template section with that group's domains, addresses, and selected final prompt.
 
 The script also appends a run record in the project root:
 
@@ -118,7 +119,7 @@ The script also appends a run record in the project root:
 prompt-usage-log.txt
 ```
 
-Each record contains the generated output folder, selected prompt file, and all domains from that run.
+Each record contains the generated output folder and prompt assignments for every domain group. The generated output folder also gets `prompt-usage.txt` with the same per-group prompt mapping.
 
 ## Codex And Domain Agent Steps
 
