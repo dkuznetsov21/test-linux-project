@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate:baza": "node scripts/generate-baza.mjs",
+    "start": "node scripts/generate-baza.mjs",
     "check": "node --check scripts/generate-baza.mjs",
     "test": "node --test"
   },
