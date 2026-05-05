@@ -192,7 +192,11 @@ ZIP creation uses the NPM `archiver` package, not the system `zip` command.
 
 ## Telegram Notifications
 
-The generator can send a Telegram report when it finishes or fails. Add the bot to a Telegram group or channel, send any message there, then run:
+The generator can send a Telegram report when it finishes or fails. Add the bot to a Telegram group or channel and send any message there before the first generator run.
+
+When `telegram-config.json` is missing, the generator automatically starts Telegram setup, shows available chats, and saves the selected chat before continuing with the normal generator questions.
+
+You can also run setup manually to reconfigure the saved chat:
 
 ```bash
 npm run telegram:setup
@@ -200,7 +204,7 @@ npm run telegram:setup
 
 The Telegram bot token is configured in `scripts/lib/config.mjs` for this local personal script.
 
-The setup command reads the bot updates, shows available chats, and saves the selected `chat_id` in local `telegram-config.json`. That file is ignored by git.
+Setup reads the bot updates, shows available chats, and saves the selected `chat_id` in local `telegram-config.json`. That file is ignored by git.
 
 To test Telegram delivery without running the generator:
 

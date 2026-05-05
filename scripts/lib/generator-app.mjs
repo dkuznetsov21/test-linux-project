@@ -25,7 +25,10 @@ import {
   renderBatchedTemplate,
   writeOutputPromptUsage,
 } from './template-service.mjs';
-import { notifyTelegram } from './telegram-notifier.mjs';
+import {
+  ensureTelegramConfig,
+  notifyTelegram,
+} from './telegram-notifier.mjs';
 
 export function buildGeneratorTelegramMessage(summary) {
   return [
@@ -65,6 +68,7 @@ export class BazaGeneratorApp {
     this.outputValidator = options.outputValidator ?? new OutputValidator(this.output);
     this.agentConcurrencyLimit = options.agentConcurrencyLimit;
     this.builtSiteArchiver = options.builtSiteArchiver;
+    this.ensureTelegramConfig = options.ensureTelegramConfig ?? ensureTelegramConfig;
     this.notifyTelegram = options.notifyTelegram ?? notifyTelegram;
   }
 
@@ -141,6 +145,7 @@ export class BazaGeneratorApp {
     const outputsDirectory = path.join(this.projectDirectory, 'outputs');
 
     try {
+      await this.ensureTelegramConfig(this.projectDirectory, this.inputSession, this.output);
       const template = await fs.readFile(templatePath, 'utf8');
       const values = await this.collectInput();
       notificationSummary.domainCount = values.domains.length;

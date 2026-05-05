@@ -4,11 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {
+  ensureTelegramConfig,
   extractChatCandidates,
   fetchTelegramChatCandidates,
+  formatTelegramChat,
   notifyTelegram,
   saveTelegramConfig,
   sendTelegramMessage,
+  setupTelegramConfig,
 } from '../scripts/lib/telegram-notifier.mjs';
 
 function createJsonResponse(body, ok = true, status = 200) {
@@ -53,6 +56,88 @@ test('fetchTelegramChatCandidates calls getUpdates and parses chats', async () =
   assert.deepEqual(candidates, [
     { chatId: '123', title: 'Dmytro', type: 'private' },
   ]);
+});
+
+test('formatTelegramChat formats chat title, type, and id', () => {
+  assert.equal(formatTelegramChat({
+    chatId: '-1001',
+    title: 'Build Alerts',
+    type: 'group',
+  }), 'Build Alerts (group, -1001)');
+});
+
+test('ensureTelegramConfig returns existing config without fetching updates', async (t) => {
+  const projectDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'telegram-notifier-'));
+  t.after(() => fs.rm(projectDirectory, { recursive: true, force: true }));
+  await saveTelegramConfig(projectDirectory, {
+    chatId: '-1001',
+    title: 'Build Alerts',
+    type: 'group',
+  });
+  const config = await ensureTelegramConfig(projectDirectory, {
+    promptChoice: async () => {
+      throw new Error('promptChoice should not be called');
+    },
+  }, { write: () => {} }, {
+    fetchImpl: async () => {
+      throw new Error('fetch should not be called');
+    },
+    token: 'token',
+  });
+
+  assert.equal(config.chatId, '-1001');
+  assert.equal(config.chatTitle, 'Build Alerts');
+  assert.equal(config.chatType, 'group');
+});
+
+test('ensureTelegramConfig runs setup when config is missing', async (t) => {
+  const projectDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'telegram-notifier-'));
+  t.after(() => fs.rm(projectDirectory, { recursive: true, force: true }));
+  const writes = [];
+  const choices = [];
+  const config = await ensureTelegramConfig(projectDirectory, {
+    promptChoice: async (label, candidates) => {
+      choices.push({ candidates, label });
+      return candidates[0];
+    },
+  }, { write: (value) => writes.push(value) }, {
+    fetchImpl: async () => createJsonResponse({
+      ok: true,
+      result: [
+        { message: { chat: { id: -1001, title: 'Build Alerts', type: 'group' } } },
+      ],
+    }),
+    token: 'token',
+  });
+
+  assert.equal(config.chatId, '-1001');
+  assert.equal(choices[0].label, 'Select Telegram chat');
+  assert.equal(choices[0].candidates[0].title, 'Build Alerts');
+  assert.match(writes.join(''), /Telegram config not found. Starting Telegram setup./);
+  assert.match(writes.join(''), /Telegram chat saved: Build Alerts \(group, -1001\)/);
+
+  const saved = JSON.parse(await fs.readFile(path.join(projectDirectory, 'telegram-config.json'), 'utf8'));
+  assert.equal(saved.chatId, '-1001');
+});
+
+test('setupTelegramConfig rejects empty Telegram chat candidates', async (t) => {
+  const projectDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'telegram-notifier-'));
+  t.after(() => fs.rm(projectDirectory, { recursive: true, force: true }));
+
+  await assert.rejects(
+    () => setupTelegramConfig(projectDirectory, {
+      promptChoice: async () => {
+        throw new Error('promptChoice should not be called');
+      },
+    }, { write: () => {} }, {
+      fetchImpl: async () => createJsonResponse({
+        ok: true,
+        result: [],
+      }),
+      token: 'token',
+    }),
+    /No Telegram chats found/,
+  );
 });
 
 test('sendTelegramMessage posts Telegram sendMessage request', async () => {

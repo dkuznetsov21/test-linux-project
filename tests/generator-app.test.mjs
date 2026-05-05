@@ -110,6 +110,7 @@ test('BazaGeneratorApp sends agent start notification before running agents and 
   const app = new BazaGeneratorApp({
     agentConcurrencyLimit: 7,
     agentRunner,
+    ensureTelegramConfig: async () => events.push('ensure-telegram'),
     inputSession,
     notifyTelegram: async (_projectDirectory, text) => {
       events.push(text.includes('starting domain agents') ? 'notify-start' : 'notify-final');
@@ -134,7 +135,8 @@ test('BazaGeneratorApp sends agent start notification before running agents and 
 
   await app.run();
 
-  assert.deepEqual(events.slice(0, 5), [
+  assert.deepEqual(events.slice(0, 6), [
+    'ensure-telegram',
     'codex',
     'validate-prompts',
     'notify-start',
@@ -219,6 +221,7 @@ test('BazaGeneratorApp collects built sites only after agents and output validat
   };
   const app = new BazaGeneratorApp({
     agentRunner,
+    ensureTelegramConfig: async () => events.push('ensure-telegram'),
     inputSession,
     notifyTelegram: async () => ({ ok: true, skipped: false }),
     output: { write: () => {} },
@@ -247,7 +250,7 @@ test('BazaGeneratorApp collects built sites only after agents and output validat
   assert.equal(archiverArgs.length, 1);
   assert.equal(archiverArgs[0].createArchive, true);
   assert.equal(path.dirname(archiverArgs[0].currentRunDirectory), path.join(projectDirectory, 'outputs'));
-  assert.deepEqual(events.slice(0, 2), ['choice-collect', 'choice-zip']);
+  assert.deepEqual(events.slice(0, 3), ['ensure-telegram', 'choice-collect', 'choice-zip']);
   assert.ok(events.indexOf('archive-run') > events.indexOf('validate-output'));
   assert.ok(events.indexOf('archive-run') < events.indexOf('input-close'));
 });
@@ -294,6 +297,7 @@ test('BazaGeneratorApp skips built site collection when output validation fails'
         events.push('archive-run');
       },
     },
+    ensureTelegramConfig: async () => {},
     inputSession,
     notifyTelegram: async () => ({ ok: true, skipped: false }),
     output: { write: () => {} },
@@ -354,6 +358,7 @@ test('BazaGeneratorApp skips built site collection when collect choice is No aft
       }),
       promptYesNo: async () => false,
     },
+    ensureTelegramConfig: async () => {},
     notifyTelegram: async () => ({ ok: true, skipped: false }),
     output: { write: () => {} },
     outputValidator: {
@@ -384,4 +389,31 @@ test('BazaGeneratorApp skips built site collection when collect choice is No aft
   await app.run();
 
   assert.deepEqual(events, []);
+});
+
+test('BazaGeneratorApp ensures Telegram config before normal input collection', async (t) => {
+  const projectDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'baza-generator-app-'));
+  t.after(() => fs.rm(projectDirectory, { recursive: true, force: true }));
+
+  await fs.mkdir(path.join(projectDirectory, 'scripts'), { recursive: true });
+  await fs.writeFile(path.join(projectDirectory, 'scripts', 'baza.txt'), '{{DOMAINS}}', 'utf8');
+
+  const events = [];
+  const app = new BazaGeneratorApp({
+    ensureTelegramConfig: async () => events.push('ensure-telegram'),
+    inputSession: {
+      close: () => events.push('input-close'),
+    },
+    notifyTelegram: async () => ({ ok: true, skipped: false }),
+    output: { write: () => {} },
+    projectDirectory,
+  });
+
+  app.collectInput = async () => {
+    events.push('collect-input');
+    throw new Error('stop after order check');
+  };
+
+  await assert.rejects(() => app.run(), /stop after order check/);
+  assert.deepEqual(events.slice(0, 2), ['ensure-telegram', 'collect-input']);
 });

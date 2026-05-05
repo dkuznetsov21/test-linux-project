@@ -36,6 +36,10 @@ function getChatDisplayName(chat) {
     || String(chat.id);
 }
 
+export function formatTelegramChat(chat) {
+  return `${chat.title} (${chat.type}, ${chat.chatId})`;
+}
+
 function addChatCandidate(candidates, chat) {
   if (!chat || chat.id === undefined || chat.id === null) {
     return;
@@ -117,6 +121,35 @@ export async function fetchTelegramChatCandidates(options = {}) {
   }
 
   return extractChatCandidates(data.result ?? []);
+}
+
+export async function setupTelegramConfig(projectDirectory, inputSession, output = process.stdout, options = {}) {
+  output.write('Fetching Telegram chats from bot updates...\n');
+  const candidates = await fetchTelegramChatCandidates(options);
+
+  if (candidates.length === 0) {
+    throw new Error('No Telegram chats found. Add the bot to a group/channel, send a message there, then run setup again.');
+  }
+
+  const selected = await inputSession.promptChoice('Select Telegram chat', candidates, formatTelegramChat);
+  const config = await saveTelegramConfig(projectDirectory, selected);
+
+  output.write(`Telegram chat saved: ${formatTelegramChat(selected)}\n`);
+  output.write(`Config file: ${config.configPath}\n`);
+
+  return config;
+}
+
+export async function ensureTelegramConfig(projectDirectory, inputSession, output = process.stdout, options = {}) {
+  const config = await loadTelegramConfig(projectDirectory);
+
+  if (config) {
+    return config;
+  }
+
+  output.write('Telegram config not found. Starting Telegram setup.\n');
+
+  return setupTelegramConfig(projectDirectory, inputSession, output, options);
 }
 
 export async function sendTelegramMessage(options) {
