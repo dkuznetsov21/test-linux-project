@@ -82,30 +82,15 @@ export async function readFinalPrompt(projectDirectory) {
   return pickRandomItem(promptFiles);
 }
 
-export function assignPromptBatches(domains, promptFiles, options = {}) {
+export function assignPromptBatches(domains, promptFile, options = {}) {
   const batchSize = options.batchSize ?? PROMPT_DOMAIN_BATCH_SIZE;
-  const random = options.random ?? Math.random;
   const domainBatches = chunkArray(domains, batchSize);
 
-  if (domainBatches.length > 1 && promptFiles.length < 2) {
-    throw new Error('At least 2 prompt .txt files are required when domains need more than one prompt batch.');
-  }
-
-  let previousPromptFileName = null;
-
-  return domainBatches.map((batchDomains, index) => {
-    const candidates = promptFiles.filter((promptFile) => (
-      promptFile.promptFileName !== previousPromptFileName
-    ));
-    const promptFile = pickRandomItem(candidates, random);
-    previousPromptFileName = promptFile.promptFileName;
-
-    return {
-      batchNumber: index + 1,
-      domains: batchDomains,
-      ...promptFile,
-    };
-  });
+  return domainBatches.map((batchDomains, index) => ({
+    batchNumber: index + 1,
+    domains: batchDomains,
+    ...promptFile,
+  }));
 }
 
 export function renderBatchedTemplate(template, values, promptBatches) {

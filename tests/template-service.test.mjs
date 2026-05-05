@@ -57,28 +57,14 @@ test('chunkArray splits domains by prompt batch size', () => {
   );
 });
 
-test('assignPromptBatches does not repeat prompt files in adjacent batches', () => {
+test('assignPromptBatches applies selected prompt file to every batch', () => {
   const domains = Array.from({ length: 61 }, (_, index) => `domain-${index + 1}.com`);
-  const promptFiles = [
-    { promptFileName: 'a.txt', finalPrompt: 'A', promptPath: '/prompts/a.txt' },
-    { promptFileName: 'b.txt', finalPrompt: 'B', promptPath: '/prompts/b.txt' },
-  ];
-  const batches = assignPromptBatches(domains, promptFiles, {
-    random: () => 0,
-  });
+  const promptFile = { promptFileName: 'selected.txt', finalPrompt: 'Selected', promptPath: '/prompts/selected.txt' };
+  const batches = assignPromptBatches(domains, promptFile);
 
   assert.deepEqual(batches.map((batch) => batch.domains.length), [30, 30, 1]);
-  assert.notEqual(batches[0].promptFileName, batches[1].promptFileName);
-  assert.notEqual(batches[1].promptFileName, batches[2].promptFileName);
-});
-
-test('assignPromptBatches rejects multiple batches with only one prompt file', () => {
-  const domains = Array.from({ length: 31 }, (_, index) => `domain-${index + 1}.com`);
-  const promptFiles = [
-    { promptFileName: 'only.txt', finalPrompt: 'Only', promptPath: '/prompts/only.txt' },
-  ];
-
-  assert.throws(() => assignPromptBatches(domains, promptFiles), /At least 2 prompt/);
+  assert.deepEqual(batches.map((batch) => batch.promptFileName), ['selected.txt', 'selected.txt', 'selected.txt']);
+  assert.deepEqual(batches.map((batch) => batch.finalPrompt), ['Selected', 'Selected', 'Selected']);
 });
 
 test('renderBatchedTemplate renders one template section per prompt batch', () => {

@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node scripts/generate-baza.mjs",
     "archive": "node scripts/archive-built-sites.mjs",
-    "check": "node --check scripts/generate-baza.mjs && node --check scripts/archive-built-sites.mjs",
+    "telegram:setup": "node scripts/telegram-setup.mjs",
+    "telegram:test": "node scripts/send-telegram-notification.mjs",
+    "check": "node --check scripts/generate-baza.mjs && node --check scripts/archive-built-sites.mjs && node --check scripts/telegram-setup.mjs && node --check scripts/send-telegram-notification.mjs",
     "test": "node --test"
   },
   "dependencies": {

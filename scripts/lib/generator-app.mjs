@@ -10,6 +10,7 @@ import { DomainAgentRunner } from './domain-agent-runner.mjs';
 import { InputSession } from './input-session.mjs';
 import {
   buildOutputDirectoryName,
+  formatDuration,
   normalizeCustomerCode,
   normalizeDomains,
   normalizeGeo,
@@ -23,6 +24,19 @@ import {
   renderBatchedTemplate,
   writeOutputPromptUsage,
 } from './template-service.mjs';
+import { notifyTelegram } from './telegram-notifier.mjs';
+
+export function buildGeneratorTelegramMessage(summary) {
+  return [
+    `Baza generator: ${summary.status}`,
+    `Duration: ${formatDuration(summary.durationMilliseconds)}`,
+    `Domains: ${summary.domainCount ?? 'unknown'}`,
+    `Prompt batches: ${summary.promptBatchCount ?? 'unknown'}`,
+    `Prompt: ${summary.promptFileName ?? 'unknown'}`,
+    `Output: ${summary.outputDirectory ?? 'unknown'}`,
+    ...(summary.error ? [`Error: ${summary.error}`] : []),
+  ].join('\n');
+}
 
 export class BazaGeneratorApp {
   constructor(options = {}) {
@@ -60,19 +74,38 @@ export class BazaGeneratorApp {
   }
 
   async run() {
+    const startedAt = Date.now();
+    const notificationSummary = {
+      domainCount: null,
+      error: null,
+      outputDirectory: null,
+      promptBatchCount: null,
+      promptFileName: null,
+      status: 'failed',
+    };
     const templatePath = path.join(this.projectDirectory, 'scripts', 'baza.txt');
     const outputsDirectory = path.join(this.projectDirectory, 'outputs');
-    const template = await fs.readFile(templatePath, 'utf8');
 
     try {
+      const template = await fs.readFile(templatePath, 'utf8');
       const values = await this.collectInput();
+      notificationSummary.domainCount = values.domains.length;
       const promptFiles = await readPromptFiles(this.projectDirectory);
-      const promptBatches = assignPromptBatches(values.domains, promptFiles);
+      const promptFile = await this.inputSession.promptChoice(
+        'Select prompt file',
+        promptFiles,
+        (item) => item.promptFileName,
+      );
+      notificationSummary.promptFileName = promptFile.promptFileName;
+      this.output.write(`Selected prompt file: ${promptFile.promptFileName}\n`);
+      const promptBatches = assignPromptBatches(values.domains, promptFile);
+      notificationSummary.promptBatchCount = promptBatches.length;
       const addressBlockByBatch = new Map(promptBatches.map((batch) => [
         batch.batchNumber,
         buildAddressBlock(batch.domains, values.geo),
       ]));
       const outputDirectory = path.join(outputsDirectory, buildOutputDirectoryName(values));
+      notificationSummary.outputDirectory = outputDirectory;
       const outputPath = path.join(outputDirectory, 'baza.txt');
       const rendered = renderBatchedTemplate(template, {
         ...values,
@@ -104,6 +137,7 @@ export class BazaGeneratorApp {
       const promptFolderSummary = await this.outputValidator.validatePromptFolders(outputDirectory, values.domains);
 
       if (!promptFolderSummary.ok) {
+        notificationSummary.error = 'Codex output folder validation failed';
         process.exitCode = 1;
         this.output.write('Codex output folder validation failed. Script finished.\n');
         return;
@@ -115,14 +149,25 @@ export class BazaGeneratorApp {
       const validationSummary = await this.outputValidator.validate(outputDirectory);
 
       if (agentSummary.failures.length > 0 || validationSummary.failures.length > 0) {
+        notificationSummary.error = 'Agent runs or output validation completed with failures';
         process.exitCode = 1;
         this.output.write('Agent runs or output validation completed with failures. Script finished.\n');
         return;
       }
 
+      notificationSummary.status = 'success';
       this.output.write('All agent runs and output validation completed. Script finished.\n');
+    } catch (error) {
+      notificationSummary.error = error.message;
+      throw error;
     } finally {
       this.inputSession.close();
+      await notifyTelegram(this.projectDirectory, buildGeneratorTelegramMessage({
+        ...notificationSummary,
+        durationMilliseconds: Date.now() - startedAt,
+      }), {
+        output: this.output,
+      });
     }
   }
 }

@@ -38,10 +38,11 @@ The generator asks for:
 3. `Geo country code` - ISO country code, for example `US`, `NZ`, `DE`.
 4. `Language` - language value written into `baza.txt`.
 5. `Topic` - topic value written into `baza.txt`.
+6. `Prompt file` - selected from `.txt` files in `prompts/`.
 
 For multi-line inputs, paste the text and press `Enter` on an empty line to finish that section.
 
-The final prompt is not entered in the terminal. The script reads `.txt` files from `prompts/`, splits domains into groups of 30, and randomly assigns one prompt file to each group.
+The final prompt text is not entered in the terminal. The script reads `.txt` files from `prompts/`, shows them in the terminal, and applies the selected prompt file to the whole run.
 
 Example prompt file:
 
@@ -49,7 +50,7 @@ Example prompt file:
 prompts/v58fin-acid-pop.txt
 ```
 
-You can keep several `.txt` prompt files in `prompts/`. Adjacent domain groups will not use the same prompt file. If more than 30 domains are entered, at least 2 prompt files are required.
+You can keep several `.txt` prompt files in `prompts/`. In an interactive terminal, use the arrow keys and press `Enter` to select one. In non-interactive input, enter the prompt number shown by the script.
 
 If the folder has zero `.txt` files, the script stops with an error.
 
@@ -111,7 +112,7 @@ baza.txt
 prompt-usage.txt
 ```
 
-The `baza.txt` file is rendered from `scripts/baza.txt`. For every 30 domains, the script renders a separate template section with that group's domains, addresses, and selected final prompt.
+The `baza.txt` file is rendered from `scripts/baza.txt`. For every 30 domains, the script renders a separate template section with that group's domains, addresses, and the selected final prompt.
 
 The script also appends a run record in the project root:
 
@@ -183,6 +184,24 @@ vite.config.ts
 ```
 
 The nested `<domain>/` folder is the final production build for that same domain. Other domain-named folders inside a domain folder are invalid. Extra files, such as `agent-output.log`, are allowed. If any required folder or file is missing, the script prints the missing items and exits with code `1`.
+
+## Telegram Notifications
+
+The generator can send a Telegram report when it finishes or fails. Add the bot to a Telegram group or channel, send any message there, then run:
+
+```bash
+npm run telegram:setup
+```
+
+The setup command reads the bot updates, shows available chats, and saves the selected `chat_id` in local `telegram-config.json`. That file is ignored by git.
+
+To test Telegram delivery without running the generator:
+
+```bash
+npm run telegram:test
+```
+
+The generator notification includes status, duration, domain count, prompt file, output folder, and error details when available. If Telegram is not configured or Telegram delivery fails, the generator only prints a warning and keeps its normal exit behavior.
 
 ## Template Placeholders
 

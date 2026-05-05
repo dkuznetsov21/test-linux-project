@@ -25,6 +25,8 @@ export const AGENT_CONCURRENCY_ENV = 'AGENT_CONCURRENCY';
 export const DEFAULT_AGENT_CONCURRENCY_LIMIT = 15;
 export const AGENT_OUTPUT_LOG_FILE = 'agent-output.log';
 export const AGENT_ARGS_PREFIX = ['--print', '--force', '--trust'];
+export const TELEGRAM_BOT_TOKEN = '8648217212:AAFXZfiV02NfaD7l3-0WNLU47M4aufL4GkA';
+export const TELEGRAM_CONFIG_FILE = 'telegram-config.json';
 
 export const REQUIRED_DOMAIN_DIRECTORIES = [
   '<domain>',
