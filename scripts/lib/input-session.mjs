@@ -103,27 +103,33 @@ export class InputSession {
   promptInteractiveChoice(label, choices, formatChoice) {
     return new Promise((resolve, reject) => {
       let selectedIndex = 0;
+      let rendered = false;
       const wasRaw = this.input.isRaw;
 
       const render = () => {
-        this.output.write('\x1B[2K\x1B[0G');
+        if (rendered) {
+          readline.moveCursor(this.output, 0, -(choices.length + 1));
+        }
+
+        readline.cursorTo(this.output, 0);
+        readline.clearScreenDown(this.output);
         this.output.write(`${label}:\n`);
 
         choices.forEach((choice, index) => {
           this.output.write(`${index === selectedIndex ? '> ' : '  '}${formatChoice(choice)}\n`);
         });
 
-        this.output.write(`\x1B[${choices.length}A`);
+        rendered = true;
       };
 
       const cleanup = () => {
         this.input.off('keypress', onKeypress);
+        this.input.off('end', onEnd);
         this.input.setRawMode(Boolean(wasRaw));
         this.rl.resume();
       };
 
       const finish = () => {
-        this.output.write(`\x1B[${choices.length - selectedIndex}B`);
         cleanup();
         resolve(choices[selectedIndex]);
       };
@@ -131,6 +137,11 @@ export class InputSession {
       const cancel = () => {
         cleanup();
         reject(new Error(`${label} was not selected`));
+      };
+
+      const onEnd = () => {
+        cleanup();
+        reject(new Error(`${label} input closed before selection`));
       };
 
       const onKeypress = (value, key = {}) => {
@@ -159,7 +170,9 @@ export class InputSession {
       this.rl.pause();
       readline.emitKeypressEvents(this.input, this.rl);
       this.input.setRawMode(true);
+      this.input.resume();
       this.input.on('keypress', onKeypress);
+      this.input.on('end', onEnd);
       render();
     });
   }
