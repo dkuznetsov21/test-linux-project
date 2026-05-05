@@ -6,6 +6,7 @@ import {
   CODEX_ARGS,
   PROMPT_DOMAIN_BATCH_SIZE,
 } from './config.mjs';
+import { BuiltSiteArchiver } from './built-site-archiver.mjs';
 import { DomainAgentRunner } from './domain-agent-runner.mjs';
 import { InputSession } from './input-session.mjs';
 import {
@@ -63,6 +64,7 @@ export class BazaGeneratorApp {
     this.agentRunner = options.agentRunner;
     this.outputValidator = options.outputValidator ?? new OutputValidator(this.output);
     this.agentConcurrencyLimit = options.agentConcurrencyLimit;
+    this.builtSiteArchiver = options.builtSiteArchiver;
     this.notifyTelegram = options.notifyTelegram ?? notifyTelegram;
   }
 
@@ -80,10 +82,39 @@ export class BazaGeneratorApp {
     });
   }
 
-  async collectInput() {
+  createBuiltSiteArchiver(currentRunDirectory, createArchive) {
+    return this.builtSiteArchiver ?? new BuiltSiteArchiver({
+      createArchive,
+      currentRunDirectory,
+      output: this.output,
+      projectDirectory: this.projectDirectory,
+    });
+  }
+
+  async collectStartupChoices() {
+    const collectBuiltSites = await this.inputSession.promptYesNo('Collect built sites after successful run?', false);
+    const createBuiltSitesZip = await this.inputSession.promptYesNo(
+      'Create ZIP after collecting built sites?',
+      false,
+    );
+
     return {
-      customerCode: await this.inputSession.promptLine('Customer folder name (2 letters)', normalizeCustomerCode),
-      domains: await this.inputSession.promptBlock('Domains', normalizeDomains),
+      collectBuiltSites,
+      createBuiltSitesZip,
+    };
+  }
+
+  async collectInput() {
+    const customerCode = await this.inputSession.promptLine('Customer folder name (2 letters)', normalizeCustomerCode);
+    const domains = await this.inputSession.promptBlock('Domains', normalizeDomains);
+
+    if (domains.length > PROMPT_DOMAIN_BATCH_SIZE) {
+      throw new Error(`Domains cannot contain more than ${PROMPT_DOMAIN_BATCH_SIZE} entries`);
+    }
+
+    return {
+      customerCode,
+      domains,
       geo: await this.inputSession.promptLine('Geo country code', normalizeGeo),
       language: await this.inputSession.promptLine('Language'),
       topic: await this.inputSession.promptLine('Topic'),
@@ -121,6 +152,7 @@ export class BazaGeneratorApp {
       );
       notificationSummary.promptFileName = promptFile.promptFileName;
       this.output.write(`Selected prompt file: ${promptFile.promptFileName}\n`);
+      const startupChoices = await this.collectStartupChoices();
       const promptBatches = assignPromptBatches(values.domains, promptFile);
       notificationSummary.promptBatchCount = promptBatches.length;
       const addressBlockByBatch = new Map(promptBatches.map((batch) => [
@@ -184,6 +216,13 @@ export class BazaGeneratorApp {
         process.exitCode = 1;
         this.output.write('Agent runs or output validation completed with failures. Script finished.\n');
         return;
+      }
+
+      if (startupChoices.collectBuiltSites) {
+        this.output.write('Collecting built sites for current run.\n');
+        await this.createBuiltSiteArchiver(outputDirectory, startupChoices.createBuiltSitesZip).run();
+      } else {
+        this.output.write('Built site collection skipped.\n');
       }
 
       notificationSummary.status = 'success';

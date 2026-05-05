@@ -39,6 +39,8 @@ The generator asks for:
 4. `Language` - language value written into `baza.txt`.
 5. `Topic` - topic value written into `baza.txt`.
 6. `Prompt file` - selected from `.txt` files in `prompts/`.
+7. `Collect built sites after successful run?` - defaults to `No`.
+8. `Create ZIP after collecting built sites?` - defaults to `No`.
 
 For multi-line inputs, paste the text and press `Enter` on an empty line to finish that section.
 
@@ -53,6 +55,8 @@ prompts/v58fin-acid-pop.txt
 You can keep several `.txt` prompt files in `prompts/`. In an interactive terminal, use the arrow keys and press `Enter` to select one. In non-interactive input, enter the prompt number shown by the script.
 
 If the folder has zero `.txt` files, the script stops with an error.
+
+The generator currently accepts up to 30 domains per run. More than 30 domains are rejected because batching is disabled.
 
 ## Domain Input Example
 
@@ -112,7 +116,7 @@ baza.txt
 prompt-usage.txt
 ```
 
-The `baza.txt` file is rendered from `scripts/baza.txt`. For every 30 domains, the script renders a separate template section with that group's domains, addresses, and the selected final prompt.
+The `baza.txt` file is rendered from `scripts/baza.txt` once per run for up to 30 domains.
 
 The script also appends a run record in the project root:
 
@@ -171,6 +175,20 @@ After all domain agents finish, the script validates every domain folder. Each d
 ```
 
 The nested `<domain>/` folder is the final production build for that same domain. Extra files, such as `agent-output.log`, are allowed. If the build folder is missing or empty, the script prints the missing item and exits with code `1`.
+
+If `Collect built sites after successful run?` was set to `Yes`, the script moves the current run's validated build folders into:
+
+```text
+outputs/built-sites/
+```
+
+If `Create ZIP after collecting built sites?` was also set to `Yes`, the script creates:
+
+```text
+outputs/built-sites.zip
+```
+
+ZIP creation uses the NPM `archiver` package, not the system `zip` command.
 
 ## Telegram Notifications
 

@@ -58,13 +58,23 @@ test('chunkArray splits domains by prompt batch size', () => {
 });
 
 test('assignPromptBatches applies selected prompt file to every batch', () => {
-  const domains = Array.from({ length: 61 }, (_, index) => `domain-${index + 1}.com`);
+  const domains = Array.from({ length: 30 }, (_, index) => `domain-${index + 1}.com`);
   const promptFile = { promptFileName: 'selected.txt', finalPrompt: 'Selected', promptPath: '/prompts/selected.txt' };
   const batches = assignPromptBatches(domains, promptFile);
 
-  assert.deepEqual(batches.map((batch) => batch.domains.length), [30, 30, 1]);
-  assert.deepEqual(batches.map((batch) => batch.promptFileName), ['selected.txt', 'selected.txt', 'selected.txt']);
-  assert.deepEqual(batches.map((batch) => batch.finalPrompt), ['Selected', 'Selected', 'Selected']);
+  assert.deepEqual(batches.map((batch) => batch.domains.length), [30]);
+  assert.deepEqual(batches.map((batch) => batch.promptFileName), ['selected.txt']);
+  assert.deepEqual(batches.map((batch) => batch.finalPrompt), ['Selected']);
+});
+
+test('assignPromptBatches rejects more than one real batch of domains', () => {
+  const domains = Array.from({ length: 31 }, (_, index) => `domain-${index + 1}.com`);
+  const promptFile = { promptFileName: 'selected.txt', finalPrompt: 'Selected', promptPath: '/prompts/selected.txt' };
+
+  assert.throws(
+    () => assignPromptBatches(domains, promptFile),
+    /Domains cannot contain more than 30 entries/,
+  );
 });
 
 test('renderBatchedTemplate renders one template section per prompt batch', () => {

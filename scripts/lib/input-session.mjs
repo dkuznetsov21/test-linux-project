@@ -16,9 +16,20 @@ export class InputSession {
   }
 
   async promptLine(label, transform = (value) => value) {
-    this.output.write(`${label}: `);
+    const previousPrompt = this.rl.getPrompt();
+
+    if (this.isTerminal) {
+      this.rl.setPrompt(`${label}: `);
+      this.rl.prompt();
+    } else {
+      this.output.write(`${label}: `);
+    }
 
     const { value: raw, done } = await this.iterator.next();
+
+    if (this.isTerminal) {
+      this.rl.setPrompt(previousPrompt);
+    }
 
     if (done) {
       throw new Error(`${label} was not provided`);
@@ -37,8 +48,19 @@ export class InputSession {
     this.output.write(`${label}: paste text, then press Enter on an empty line.\n`);
 
     const lines = [];
+    const previousPrompt = this.rl.getPrompt();
+
+    if (this.isTerminal) {
+      this.rl.setPrompt(`${label}> `);
+    }
 
     while (true) {
+      if (this.isTerminal) {
+        this.rl.prompt();
+      } else {
+        this.output.write(`${label}> `);
+      }
+
       const { value: raw, done } = await this.iterator.next();
 
       if (done) {
@@ -54,6 +76,10 @@ export class InputSession {
       lines.push(line);
     }
 
+    if (this.isTerminal) {
+      this.rl.setPrompt(previousPrompt);
+    }
+
     const value = transform(lines.join('\n').trim());
 
     if (!value || (Array.isArray(value) && value.length === 0)) {
@@ -63,9 +89,15 @@ export class InputSession {
     return value;
   }
 
-  async promptChoice(label, choices, formatChoice = (choice) => String(choice)) {
+  async promptChoice(label, choices, formatChoice = (choice) => String(choice), options = {}) {
     if (choices.length === 0) {
       throw new Error(`${label} has no choices`);
+    }
+
+    const defaultIndex = options.defaultIndex ?? 0;
+
+    if (!Number.isInteger(defaultIndex) || defaultIndex < 0 || defaultIndex >= choices.length) {
+      throw new Error(`${label} default choice must be between 1 and ${choices.length}`);
     }
 
     if (choices.length === 1) {
@@ -74,20 +106,36 @@ export class InputSession {
     }
 
     if (!this.isTerminal || typeof this.input.setRawMode !== 'function') {
-      return this.promptNumberedChoice(label, choices, formatChoice);
+      return this.promptNumberedChoice(label, choices, formatChoice, {
+        allowDefault: options.allowDefault ?? false,
+        defaultIndex,
+      });
     }
 
-    return this.promptInteractiveChoice(label, choices, formatChoice);
+    return this.promptInteractiveChoice(label, choices, formatChoice, { defaultIndex });
   }
 
-  async promptNumberedChoice(label, choices, formatChoice) {
+  async promptNumberedChoice(label, choices, formatChoice, options = {}) {
     this.output.write(`${label}:\n`);
 
     choices.forEach((choice, index) => {
-      this.output.write(`${index + 1}. ${formatChoice(choice)}\n`);
+      const defaultMarker = options.allowDefault && index === options.defaultIndex ? ' (default)' : '';
+      this.output.write(`${index + 1}. ${formatChoice(choice)}${defaultMarker}\n`);
     });
 
-    const selectedNumber = await this.promptLine(`${label} number`, (value) => {
+    this.output.write(`${label} number: `);
+
+    const { value: raw, done } = await this.iterator.next();
+
+    if (done) {
+      throw new Error(`${label} number was not provided`);
+    }
+
+    const selectedNumber = ((value) => {
+      if (options.allowDefault && value === '') {
+        return options.defaultIndex + 1;
+      }
+
       const parsed = Number(value);
 
       if (!Number.isInteger(parsed) || parsed < 1 || parsed > choices.length) {
@@ -95,14 +143,14 @@ export class InputSession {
       }
 
       return parsed;
-    });
+    })(sanitizeInput(raw).trim());
 
     return choices[selectedNumber - 1];
   }
 
-  promptInteractiveChoice(label, choices, formatChoice) {
+  promptInteractiveChoice(label, choices, formatChoice, options = {}) {
     return new Promise((resolve, reject) => {
-      let selectedIndex = 0;
+      let selectedIndex = options.defaultIndex ?? 0;
       let rendered = false;
       const wasRaw = this.input.isRaw;
 
@@ -175,6 +223,46 @@ export class InputSession {
       this.input.on('end', onEnd);
       render();
     });
+  }
+
+  promptYesNo(label, defaultValue = false) {
+    if (!this.isTerminal || typeof this.input.setRawMode !== 'function') {
+      const defaultLabel = defaultValue ? 'yes' : 'no';
+
+      this.output.write(`${label} (yes/no, default ${defaultLabel}): `);
+
+      return this.iterator.next().then(({ value: raw, done }) => {
+        if (done) {
+          throw new Error(`${label} was not provided`);
+        }
+
+        const value = sanitizeInput(raw).trim().toLowerCase();
+
+        if (value === '') {
+          return defaultValue;
+        }
+
+        if (value === 'yes' || value === 'y') {
+          return true;
+        }
+
+        if (value === 'no' || value === 'n') {
+          return false;
+        }
+
+        throw new Error(`${label} must be yes or no`);
+      });
+    }
+
+    return this.promptChoice(
+      label,
+      defaultValue ? [true, false] : [false, true],
+      (choice) => (choice ? 'Yes' : 'No'),
+      {
+        allowDefault: true,
+        defaultIndex: 0,
+      },
+    );
   }
 
   close() {

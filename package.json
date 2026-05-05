@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@faker-js/faker": "^9.9.0",
+    "archiver": "^7.0.1",
     "world-countries": "^5.1.0"
   }
 }

@@ -78,6 +78,7 @@ test('BazaGeneratorApp sends agent start notification before running agents and 
   const notifications = [];
   const inputSession = {
     close: () => events.push('input-close'),
+    promptYesNo: async () => false,
     promptChoice: async () => ({
       finalPrompt: 'Final prompt',
       promptFileName: 'prompt.txt',
@@ -150,4 +151,237 @@ test('BazaGeneratorApp sends agent start notification before running agents and 
   assert.match(notifications[1], /Agents failed: 0/);
   assert.match(notifications[1], /Validation valid: 2/);
   assert.match(notifications[1], /Validation invalid: 0/);
+});
+
+test('BazaGeneratorApp collects built sites only after agents and output validation succeed', async (t) => {
+  const projectDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'baza-generator-app-'));
+  t.after(() => fs.rm(projectDirectory, { recursive: true, force: true }));
+
+  await fs.mkdir(path.join(projectDirectory, 'scripts'), { recursive: true });
+  await fs.mkdir(path.join(projectDirectory, 'prompts'), { recursive: true });
+  await fs.writeFile(path.join(projectDirectory, 'scripts', 'baza.txt'), [
+    '{{DOMAINS}}',
+    '{{GEO}}',
+    '{{LANGUAGE}}',
+    '{{TOPIC}}',
+    '{{ADDRESS_BLOCK}}',
+    '{{FINAL_PROMPT}}',
+  ].join('\n'), 'utf8');
+  await fs.writeFile(path.join(projectDirectory, 'prompts', 'prompt.txt'), 'Final prompt', 'utf8');
+
+  const events = [];
+  const runCalls = [];
+  const archiverArgs = [];
+  const inputSession = {
+    close: () => events.push('input-close'),
+    promptYesNo: async (label) => {
+      events.push(label.includes('Collect built sites') ? 'choice-collect' : 'choice-zip');
+      return true;
+    },
+    promptChoice: async () => ({
+      finalPrompt: 'Final prompt',
+      promptFileName: 'prompt.txt',
+      promptPath: path.join(projectDirectory, 'prompts', 'prompt.txt'),
+    }),
+  };
+  const outputValidator = {
+    validatePromptFolders: async () => {
+      events.push('validate-prompts');
+      return { ok: true };
+    },
+    validate: async () => {
+      events.push('validate-output');
+      return {
+        failures: [],
+        successes: [{ domain: 'example.com' }],
+      };
+    },
+  };
+  const agentRunner = {
+    run: async () => {
+      events.push('agents-run');
+      return {
+        failures: [],
+        successes: [{ domain: 'example.com' }],
+      };
+    },
+  };
+  const builtSiteArchiver = {
+    run: async () => {
+      events.push('archive-run');
+      runCalls.push('archive-run');
+      return {
+        archivePath: '/outputs/built-sites.zip',
+        destinationDirectory: '/outputs/built-sites',
+        moved: [],
+      };
+    },
+  };
+  const app = new BazaGeneratorApp({
+    agentRunner,
+    inputSession,
+    notifyTelegram: async () => ({ ok: true, skipped: false }),
+    output: { write: () => {} },
+    outputValidator,
+    projectDirectory,
+  });
+  app.createBuiltSiteArchiver = (currentRunDirectory, createArchive) => {
+    archiverArgs.push({ createArchive, currentRunDirectory });
+    return builtSiteArchiver;
+  };
+
+  app.collectInput = async () => ({
+    customerCode: 'DA',
+    domains: ['example.com'],
+    geo: 'US',
+    language: 'English',
+    topic: 'Finance',
+  });
+  app.runCodex = async () => {
+    events.push('codex');
+  };
+
+  await app.run();
+
+  assert.deepEqual(runCalls, ['archive-run']);
+  assert.equal(archiverArgs.length, 1);
+  assert.equal(archiverArgs[0].createArchive, true);
+  assert.equal(path.dirname(archiverArgs[0].currentRunDirectory), path.join(projectDirectory, 'outputs'));
+  assert.deepEqual(events.slice(0, 2), ['choice-collect', 'choice-zip']);
+  assert.ok(events.indexOf('archive-run') > events.indexOf('validate-output'));
+  assert.ok(events.indexOf('archive-run') < events.indexOf('input-close'));
+});
+
+test('BazaGeneratorApp skips built site collection when output validation fails', async (t) => {
+  const projectDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'baza-generator-app-'));
+  const previousExitCode = process.exitCode;
+  t.after(() => fs.rm(projectDirectory, { recursive: true, force: true }));
+  t.after(() => {
+    process.exitCode = previousExitCode;
+  });
+
+  await fs.mkdir(path.join(projectDirectory, 'scripts'), { recursive: true });
+  await fs.mkdir(path.join(projectDirectory, 'prompts'), { recursive: true });
+  await fs.writeFile(path.join(projectDirectory, 'scripts', 'baza.txt'), [
+    '{{DOMAINS}}',
+    '{{GEO}}',
+    '{{LANGUAGE}}',
+    '{{TOPIC}}',
+    '{{ADDRESS_BLOCK}}',
+    '{{FINAL_PROMPT}}',
+  ].join('\n'), 'utf8');
+  await fs.writeFile(path.join(projectDirectory, 'prompts', 'prompt.txt'), 'Final prompt', 'utf8');
+
+  const events = [];
+  const inputSession = {
+    close: () => events.push('input-close'),
+    promptYesNo: async () => true,
+    promptChoice: async () => ({
+      finalPrompt: 'Final prompt',
+      promptFileName: 'prompt.txt',
+      promptPath: path.join(projectDirectory, 'prompts', 'prompt.txt'),
+    }),
+  };
+  const app = new BazaGeneratorApp({
+    agentRunner: {
+      run: async () => ({
+        failures: [],
+        successes: [{ domain: 'example.com' }],
+      }),
+    },
+    builtSiteArchiver: {
+      run: async () => {
+        events.push('archive-run');
+      },
+    },
+    inputSession,
+    notifyTelegram: async () => ({ ok: true, skipped: false }),
+    output: { write: () => {} },
+    outputValidator: {
+      validatePromptFolders: async () => ({ ok: true }),
+      validate: async () => ({
+        failures: [{ domain: 'example.com' }],
+        successes: [],
+      }),
+    },
+    projectDirectory,
+  });
+
+  app.collectInput = async () => ({
+    customerCode: 'DA',
+    domains: ['example.com'],
+    geo: 'US',
+    language: 'English',
+    topic: 'Finance',
+  });
+  app.runCodex = async () => {};
+
+  await app.run();
+
+  assert.equal(events.includes('archive-run'), false);
+});
+
+test('BazaGeneratorApp skips built site collection when collect choice is No after success', async (t) => {
+  const projectDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'baza-generator-app-'));
+  t.after(() => fs.rm(projectDirectory, { recursive: true, force: true }));
+
+  await fs.mkdir(path.join(projectDirectory, 'scripts'), { recursive: true });
+  await fs.mkdir(path.join(projectDirectory, 'prompts'), { recursive: true });
+  await fs.writeFile(path.join(projectDirectory, 'scripts', 'baza.txt'), [
+    '{{DOMAINS}}',
+    '{{GEO}}',
+    '{{LANGUAGE}}',
+    '{{TOPIC}}',
+    '{{ADDRESS_BLOCK}}',
+    '{{FINAL_PROMPT}}',
+  ].join('\n'), 'utf8');
+  await fs.writeFile(path.join(projectDirectory, 'prompts', 'prompt.txt'), 'Final prompt', 'utf8');
+
+  const events = [];
+  const app = new BazaGeneratorApp({
+    agentRunner: {
+      run: async () => ({
+        failures: [],
+        successes: [{ domain: 'example.com' }],
+      }),
+    },
+    inputSession: {
+      close: () => {},
+      promptChoice: async () => ({
+        finalPrompt: 'Final prompt',
+        promptFileName: 'prompt.txt',
+        promptPath: path.join(projectDirectory, 'prompts', 'prompt.txt'),
+      }),
+      promptYesNo: async () => false,
+    },
+    notifyTelegram: async () => ({ ok: true, skipped: false }),
+    output: { write: () => {} },
+    outputValidator: {
+      validatePromptFolders: async () => ({ ok: true }),
+      validate: async () => ({
+        failures: [],
+        successes: [{ domain: 'example.com' }],
+      }),
+    },
+    projectDirectory,
+  });
+
+  app.collectInput = async () => ({
+    customerCode: 'DA',
+    domains: ['example.com'],
+    geo: 'US',
+    language: 'English',
+    topic: 'Finance',
+  });
+  app.createBuiltSiteArchiver = () => {
+    events.push('archive-created');
+    return {
+      run: async () => events.push('archive-run'),
+    };
+  };
+  app.runCodex = async () => {};
+
+  await app.run();
+
+  assert.deepEqual(events, []);
 });

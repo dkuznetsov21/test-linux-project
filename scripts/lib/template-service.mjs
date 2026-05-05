@@ -84,13 +84,16 @@ export async function readFinalPrompt(projectDirectory) {
 
 export function assignPromptBatches(domains, promptFile, options = {}) {
   const batchSize = options.batchSize ?? PROMPT_DOMAIN_BATCH_SIZE;
-  const domainBatches = chunkArray(domains, batchSize);
 
-  return domainBatches.map((batchDomains, index) => ({
-    batchNumber: index + 1,
-    domains: batchDomains,
+  if (domains.length > batchSize) {
+    throw new Error(`Domains cannot contain more than ${batchSize} entries`);
+  }
+
+  return [{
+    batchNumber: 1,
+    domains,
     ...promptFile,
-  }));
+  }];
 }
 
 export function renderBatchedTemplate(template, values, promptBatches) {

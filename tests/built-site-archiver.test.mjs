@@ -10,6 +10,7 @@ import {
   buildMovePlan,
   ensureReadyDestination,
   findBuiltSites,
+  findBuiltSitesInRun,
   findDuplicateDomains,
 } from '../scripts/lib/built-site-archiver.mjs';
 
@@ -36,6 +37,21 @@ test('findBuiltSites finds nested domain build folders and skips destination fol
 
   assert.deepEqual(sites.map((site) => site.domain), ['example-a.com', 'example-b.com']);
   assert.deepEqual(sites.map((site) => site.sourceDirectory), [firstSource, secondSource]);
+});
+
+test('findBuiltSitesInRun only finds built folders in the selected run directory', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'built-sites-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const outputsDirectory = path.join(root, 'outputs');
+  const currentRunDirectory = path.join(outputsDirectory, 'AA 01.05 US (Topic)');
+
+  const currentSource = await createBuiltSiteFixture(outputsDirectory, 'AA 01.05 US (Topic)', 'example-a.com');
+  await createBuiltSiteFixture(outputsDirectory, 'BB 02.05 US (Topic)', 'example-b.com');
+
+  const sites = await findBuiltSitesInRun(currentRunDirectory);
+
+  assert.deepEqual(sites.map((site) => site.domain), ['example-a.com']);
+  assert.deepEqual(sites.map((site) => site.sourceDirectory), [currentSource]);
 });
 
 test('findDuplicateDomains reports duplicate built site domains', async () => {
@@ -120,4 +136,59 @@ test('BuiltSiteArchiver moves built folders and calls archive creation', async (
   );
   assert.equal(movedIndex, '<!doctype html>');
   assert.match(writes.join(''), /Moved example\.com/);
+});
+
+test('createZipArchive creates a non-empty ZIP file', async (t) => {
+  const projectDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'built-sites-'));
+  t.after(() => fs.rm(projectDirectory, { recursive: true, force: true }));
+  const outputsDirectory = path.join(projectDirectory, 'outputs');
+  const builtSitesDirectory = path.join(outputsDirectory, BUILT_SITES_DIRECTORY_NAME);
+
+  await fs.mkdir(path.join(builtSitesDirectory, 'example.com'), { recursive: true });
+  await fs.writeFile(path.join(builtSitesDirectory, 'example.com', 'index.html'), '<!doctype html>', 'utf8');
+
+  const archiver = new BuiltSiteArchiver({
+    projectDirectory,
+    output: { write: () => {} },
+  });
+  const archivePath = await archiver.zipArchive(outputsDirectory, { write: () => {} });
+  const stats = await fs.stat(archivePath);
+
+  assert.equal(archivePath, path.join(outputsDirectory, BUILT_SITES_ARCHIVE_NAME));
+  assert.ok(stats.size > 0);
+});
+
+test('BuiltSiteArchiver can collect only the current run and skip ZIP creation', async (t) => {
+  const projectDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'built-sites-'));
+  t.after(() => fs.rm(projectDirectory, { recursive: true, force: true }));
+  const outputsDirectory = path.join(projectDirectory, 'outputs');
+  const currentRunDirectory = path.join(outputsDirectory, 'AA 01.05 US (Topic)');
+  const currentSource = await createBuiltSiteFixture(outputsDirectory, 'AA 01.05 US (Topic)', 'example.com');
+  const olderSource = await createBuiltSiteFixture(outputsDirectory, 'BB 02.05 US (Topic)', 'older.com');
+  const archiveCalls = [];
+  const archiver = new BuiltSiteArchiver({
+    createArchive: false,
+    currentRunDirectory,
+    projectDirectory,
+    output: { write: () => {} },
+    zipArchive: async (directory) => {
+      archiveCalls.push(directory);
+    },
+  });
+
+  await fs.writeFile(path.join(outputsDirectory, BUILT_SITES_ARCHIVE_NAME), 'existing', 'utf8');
+
+  const summary = await archiver.run();
+
+  assert.deepEqual(archiveCalls, []);
+  assert.equal(summary.archivePath, null);
+  assert.equal(summary.moved.length, 1);
+  await assert.rejects(() => fs.stat(currentSource), /ENOENT/);
+  await assert.doesNotReject(() => fs.stat(olderSource));
+  await assert.doesNotReject(() => fs.stat(path.join(
+    outputsDirectory,
+    BUILT_SITES_DIRECTORY_NAME,
+    'example.com',
+    'index.html',
+  )));
 });
