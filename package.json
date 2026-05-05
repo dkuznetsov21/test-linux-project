@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/generate-baza.mjs",
-    "check": "node --check scripts/generate-baza.mjs",
+    "archive": "node scripts/archive-built-sites.mjs",
+    "check": "node --check scripts/generate-baza.mjs && node --check scripts/archive-built-sites.mjs",
     "test": "node --test"
   },
   "dependencies": {
