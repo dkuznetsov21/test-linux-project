@@ -3,29 +3,21 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import {
-  REQUIRED_DOMAIN_DIRECTORIES,
-  REQUIRED_DOMAIN_FILES,
-} from '../scripts/lib/config.mjs';
 import { OutputValidator } from '../scripts/lib/output-validator.mjs';
 
-async function createDomainFixture(root, domain, missing = new Set()) {
+async function createDomainFixture(root, domain, options = {}) {
   const domainDirectory = path.join(root, domain);
 
   await fs.mkdir(domainDirectory, { recursive: true });
   await fs.writeFile(path.join(domainDirectory, 'promt.txt'), 'prompt', 'utf8');
 
-  for (const directoryName of REQUIRED_DOMAIN_DIRECTORIES) {
-    const expectedName = directoryName === '<domain>' ? domain : directoryName;
+  if (options.createBuildDirectory !== false) {
+    const buildDirectory = path.join(domainDirectory, domain);
 
-    if (!missing.has(`${expectedName}/`)) {
-      await fs.mkdir(path.join(domainDirectory, expectedName), { recursive: true });
-    }
-  }
+    await fs.mkdir(buildDirectory, { recursive: true });
 
-  for (const fileName of REQUIRED_DOMAIN_FILES) {
-    if (!missing.has(fileName)) {
-      await fs.writeFile(path.join(domainDirectory, fileName), 'x', 'utf8');
+    if (options.emptyBuildDirectory !== true) {
+      await fs.writeFile(path.join(buildDirectory, 'index.html'), 'x', 'utf8');
     }
   }
 
@@ -45,31 +37,28 @@ test('OutputValidator reports valid domain output', async (t) => {
   assert.match(writes.join(''), /1 valid, 0 invalid/);
 });
 
-test('OutputValidator reports missing required files and folders', async (t) => {
+test('OutputValidator reports missing built site folder', async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'baza-validator-'));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
-  await createDomainFixture(root, 'example.com', new Set(['src/', 'vite.config.ts']));
+  await createDomainFixture(root, 'example.com', { createBuildDirectory: false });
   const validator = new OutputValidator({ write: () => {} });
   const summary = await validator.validate(root);
 
   assert.equal(summary.successes.length, 0);
   assert.equal(summary.failures.length, 1);
-  assert.deepEqual(summary.failures[0].missing.sort(), ['src/', 'vite.config.ts']);
+  assert.deepEqual(summary.failures[0].missing, ['example.com/']);
 });
 
-test('OutputValidator rejects nested folders for other domains', async (t) => {
+test('OutputValidator reports empty built site folder', async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'baza-validator-'));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
-  const domainDirectory = await createDomainFixture(root, 'example.com');
-
-  await fs.mkdir(path.join(domainDirectory, 'other-example.com'), { recursive: true });
-
+  await createDomainFixture(root, 'example.com', { emptyBuildDirectory: true });
   const validator = new OutputValidator({ write: () => {} });
   const summary = await validator.validate(root);
 
   assert.equal(summary.successes.length, 0);
   assert.equal(summary.failures.length, 1);
-  assert.deepEqual(summary.failures[0].missing, ['unexpected other-example.com/']);
+  assert.deepEqual(summary.failures[0].missing, ['example.com/']);
 });
 
 test('OutputValidator validates exact prompt folders before agent runs', async (t) => {

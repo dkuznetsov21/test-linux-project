@@ -28,26 +28,6 @@ export const AGENT_ARGS_PREFIX = ['--print', '--force', '--trust'];
 export const TELEGRAM_BOT_TOKEN = '8648217212:AAFXZfiV02NfaD7l3-0WNLU47M4aufL4GkA';
 export const TELEGRAM_CONFIG_FILE = 'telegram-config.json';
 
-export const REQUIRED_DOMAIN_DIRECTORIES = [
-  '<domain>',
-  'node_modules',
-  'public',
-  'src',
-];
-
-export const REQUIRED_DOMAIN_FILES = [
-  'index.html',
-  'package.json',
-  'package-lock.json',
-  'postcss.config.js',
-  'promt.txt',
-  'tailwind.config.js',
-  'tsconfig.json',
-  'tsconfig.node.json',
-  'vercel.json',
-  'vite.config.ts',
-];
-
 export function parsePositiveInteger(value, fallback, name = AGENT_CONCURRENCY_ENV) {
   if (value === undefined || value === '') {
     return fallback;

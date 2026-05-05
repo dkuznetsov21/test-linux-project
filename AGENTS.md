@@ -36,13 +36,26 @@ Prefer small, single-purpose helpers such as `normalizeDomains()` and `buildOutp
 
 ## Testing Guidelines
 
-There is no automated test suite yet. For changes to generator logic:
+For changes to generator logic:
 
 - run `node --check scripts/generate-baza.mjs`
-- execute `node scripts/generate-baza.mjs` with sample input
+- run the focused `node --test ...` test file when one exists
+- run `npm test` for broad behavioral changes
+- execute `node scripts/generate-baza.mjs` with sample input when interactive behavior changes
 - verify placeholder replacement, output naming, and error handling for empty required values
 
-If tests are added later, place them under `tests/` or alongside the script with a clear `*.test.*` naming scheme.
+Write or update unit tests for critical generator behavior, validation rules, notification formatting, concurrency helpers, and parsing/normalization logic. Documentation-only changes do not need tests when no runtime behavior changes.
+
+Place tests under `tests/` or alongside the script with a clear `*.test.*` naming scheme.
+
+## Multi-Agent Development Workflow
+
+Use a multi-agent workflow for non-trivial implementation work when the tool environment supports it.
+
+- Developer agent: acts first and implements the change. Treat this role as a senior JavaScript/TypeScript architect who specializes in Node.js automation scripts and keeps changes aligned with this repository's ESM style.
+- Tester agent: acts after the developer implementation. It reviews risks, edge cases, regressions, and test coverage, then runs or recommends the focused verification commands.
+
+The main agent remains responsible for integrating results, resolving conflicts, preserving user changes, running final checks, and updating memory. For small docs-only edits, it is acceptable to perform the roles locally without spawning separate agents.
 
 ## Commit & Pull Request Guidelines
 
@@ -57,3 +70,13 @@ For pull requests, include:
 ## Configuration Notes
 
 Do not rename placeholders in `scripts/baza.txt` without updating `PLACEHOLDERS` and renderer validation in `scripts/generate-baza.mjs`.
+
+## Long-Term Project Memory
+
+This project may contain a local Obsidian-compatible memory vault in `memory/`. The folder is intentionally ignored by git.
+
+When `memory/00 Index.md` exists, read it at the start of non-trivial work to recover durable project context. Update the memory when a conversation changes durable knowledge, including architecture, data flow, validation rules, scripts, operational workflow, user preferences, important decisions, or unresolved follow-ups.
+
+Use Obsidian wiki links such as `[[02 Architecture]]` and `[[04 Decisions]]`. Keep updates concise and durable. Do not paste full chat transcripts, secrets, transient command output, generated logs, or one-off implementation noise.
+
+At the end of substantial work, append a dated bullet to `memory/05 Work Log.md` and update any affected topic note. If the memory folder does not exist, do not create it unless the user asks for long-term memory.

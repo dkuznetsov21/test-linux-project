@@ -164,26 +164,13 @@ While domain agents are running, the script prints progress every 30 seconds and
 
 The script continues running the remaining domains even if one domain agent fails. At the end it prints a summary. If every domain succeeds, it prints `All agent runs completed. Script finished.`. If any domain fails, it prints the failed domains and exits with code `1`.
 
-After all domain agents finish, the script validates every domain folder. Each domain folder must contain:
+After all domain agents finish, the script validates every domain folder. Each domain folder must contain a non-empty nested folder named after that same domain:
 
 ```text
 <domain>/
-node_modules/
-public/
-src/
-index.html
-package.json
-package-lock.json
-postcss.config.js
-promt.txt
-tailwind.config.js
-tsconfig.json
-tsconfig.node.json
-vercel.json
-vite.config.ts
 ```
 
-The nested `<domain>/` folder is the final production build for that same domain. Other domain-named folders inside a domain folder are invalid. Extra files, such as `agent-output.log`, are allowed. If any required folder or file is missing, the script prints the missing items and exits with code `1`.
+The nested `<domain>/` folder is the final production build for that same domain. Extra files, such as `agent-output.log`, are allowed. If the build folder is missing or empty, the script prints the missing item and exits with code `1`.
 
 ## Telegram Notifications
 
@@ -193,6 +180,8 @@ The generator can send a Telegram report when it finishes or fails. Add the bot 
 npm run telegram:setup
 ```
 
+The Telegram bot token is configured in `scripts/lib/config.mjs` for this local personal script.
+
 The setup command reads the bot updates, shows available chats, and saves the selected `chat_id` in local `telegram-config.json`. That file is ignored by git.
 
 To test Telegram delivery without running the generator:
@@ -201,7 +190,7 @@ To test Telegram delivery without running the generator:
 npm run telegram:test
 ```
 
-The generator notification includes status, duration, domain count, prompt file, output folder, and error details when available. If Telegram is not configured or Telegram delivery fails, the generator only prints a warning and keeps its normal exit behavior.
+The generator sends a notification when Codex has finished and domain agents are about to start. The final generator notification includes status, duration, domain count, agent success/failure counts, validation valid/invalid counts, prompt file, output folder, and error details when available. If Telegram is not configured or Telegram delivery fails, the generator only prints a warning and keeps its normal exit behavior.
 
 ## Template Placeholders
 

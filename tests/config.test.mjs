@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   DEFAULT_AGENT_CONCURRENCY_LIMIT,
+  TELEGRAM_BOT_TOKEN,
   loadRuntimeConfig,
   parsePositiveInteger,
 } from '../scripts/lib/config.mjs';
+
+test('Telegram bot token is configured in source for local personal use', () => {
+  assert.equal(TELEGRAM_BOT_TOKEN, '8648217212:AAFXZfiV02NfaD7l3-0WNLU47M4aufL4GkA');
+});
 
 test('parsePositiveInteger returns fallback for missing values', () => {
   assert.equal(parsePositiveInteger(undefined, 15), 15);

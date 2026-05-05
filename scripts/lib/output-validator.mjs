@@ -1,20 +1,18 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {
-  REQUIRED_DOMAIN_DIRECTORIES,
-  REQUIRED_DOMAIN_FILES,
-} from './config.mjs';
 import { findDomainPromptJobs } from './domain-agent-runner.mjs';
 
-async function pathExistsAsType(targetPath, expectedType) {
+async function directoryExistsAndIsNotEmpty(targetPath) {
   try {
     const stats = await fs.stat(targetPath);
 
-    if (expectedType === 'directory') {
-      return stats.isDirectory();
+    if (!stats.isDirectory()) {
+      return false;
     }
 
-    return stats.isFile();
+    const entries = await fs.readdir(targetPath);
+
+    return entries.length > 0;
   } catch (error) {
     if (error.code === 'ENOENT') {
       return false;
@@ -26,10 +24,6 @@ async function pathExistsAsType(targetPath, expectedType) {
 
 function sortValues(values) {
   return [...values].sort((first, second) => first.localeCompare(second));
-}
-
-function isDomainLikeDirectoryName(name) {
-  return /^[^\s./\\][^\s/\\]*\.[^\s/\\]+$/.test(name);
 }
 
 export class OutputValidator {
@@ -79,33 +73,9 @@ export class OutputValidator {
   }
 
   async validateDomainOutput(job) {
-    const directoryChecks = REQUIRED_DOMAIN_DIRECTORIES.map(async (directoryName) => {
-      const expectedDirectoryName = directoryName === '<domain>' ? job.domain : directoryName;
-      const expectedPath = path.join(job.domainDirectory, expectedDirectoryName);
-      const exists = await pathExistsAsType(expectedPath, 'directory');
-
-      return exists ? null : `${expectedDirectoryName}/`;
-    });
-
-    const fileChecks = REQUIRED_DOMAIN_FILES.map(async (fileName) => {
-      const expectedPath = path.join(job.domainDirectory, fileName);
-      const exists = await pathExistsAsType(expectedPath, 'file');
-
-      return exists ? null : fileName;
-    });
-
-    const nestedEntries = await fs.readdir(job.domainDirectory, { withFileTypes: true });
-    const unexpectedNestedDomainFolders = nestedEntries
-      .filter((entry) => (
-        entry.isDirectory()
-        && entry.name !== job.domain
-        && isDomainLikeDirectoryName(entry.name)
-      ))
-      .map((entry) => `unexpected ${entry.name}/`);
-    const missing = [
-      ...(await Promise.all([...directoryChecks, ...fileChecks])).filter(Boolean),
-      ...unexpectedNestedDomainFolders,
-    ];
+    const builtSiteDirectory = path.join(job.domainDirectory, job.domain);
+    const hasBuiltSiteDirectory = await directoryExistsAndIsNotEmpty(builtSiteDirectory);
+    const missing = hasBuiltSiteDirectory ? [] : [`${job.domain}/`];
 
     return {
       ...job,

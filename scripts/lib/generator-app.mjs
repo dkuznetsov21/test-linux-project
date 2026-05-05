@@ -32,9 +32,25 @@ export function buildGeneratorTelegramMessage(summary) {
     `Duration: ${formatDuration(summary.durationMilliseconds)}`,
     `Domains: ${summary.domainCount ?? 'unknown'}`,
     `Prompt batches: ${summary.promptBatchCount ?? 'unknown'}`,
+    `Agents total: ${summary.totalAgentCount ?? 'unknown'}`,
+    `Agents succeeded: ${summary.agentSucceededCount ?? 'unknown'}`,
+    `Agents failed: ${summary.agentFailedCount ?? 'unknown'}`,
+    `Validation valid: ${summary.validationSucceededCount ?? 'unknown'}`,
+    `Validation invalid: ${summary.validationFailedCount ?? 'unknown'}`,
     `Prompt: ${summary.promptFileName ?? 'unknown'}`,
     `Output: ${summary.outputDirectory ?? 'unknown'}`,
     ...(summary.error ? [`Error: ${summary.error}`] : []),
+  ].join('\n');
+}
+
+export function buildDomainAgentsStartedTelegramMessage(summary) {
+  return [
+    'Baza generator: starting domain agents',
+    `Domains: ${summary.domainCount ?? 'unknown'}`,
+    `Prompt batches: ${summary.promptBatchCount ?? 'unknown'}`,
+    `Agent concurrency: ${summary.agentConcurrencyLimit ?? 'unknown'}`,
+    `Prompt: ${summary.promptFileName ?? 'unknown'}`,
+    `Output: ${summary.outputDirectory ?? 'unknown'}`,
   ].join('\n');
 }
 
@@ -47,6 +63,7 @@ export class BazaGeneratorApp {
     this.agentRunner = options.agentRunner;
     this.outputValidator = options.outputValidator ?? new OutputValidator(this.output);
     this.agentConcurrencyLimit = options.agentConcurrencyLimit;
+    this.notifyTelegram = options.notifyTelegram ?? notifyTelegram;
   }
 
   runCodex(outputDirectory) {
@@ -76,12 +93,18 @@ export class BazaGeneratorApp {
   async run() {
     const startedAt = Date.now();
     const notificationSummary = {
+      agentConcurrencyLimit: this.agentConcurrencyLimit ?? null,
       domainCount: null,
       error: null,
+      agentFailedCount: null,
+      agentSucceededCount: null,
       outputDirectory: null,
       promptBatchCount: null,
       promptFileName: null,
       status: 'failed',
+      totalAgentCount: null,
+      validationFailedCount: null,
+      validationSucceededCount: null,
     };
     const templatePath = path.join(this.projectDirectory, 'scripts', 'baza.txt');
     const outputsDirectory = path.join(this.projectDirectory, 'outputs');
@@ -144,9 +167,17 @@ export class BazaGeneratorApp {
       }
 
       this.output.write('Domain prompt folders valid. Starting domain agent runs.\n');
+      await this.notifyTelegram(this.projectDirectory, buildDomainAgentsStartedTelegramMessage(notificationSummary), {
+        output: this.output,
+      });
 
       const agentSummary = await this.createAgentRunner().run(outputDirectory);
       const validationSummary = await this.outputValidator.validate(outputDirectory);
+      notificationSummary.agentSucceededCount = agentSummary.successes.length;
+      notificationSummary.agentFailedCount = agentSummary.failures.length;
+      notificationSummary.totalAgentCount = agentSummary.successes.length + agentSummary.failures.length;
+      notificationSummary.validationSucceededCount = validationSummary.successes.length;
+      notificationSummary.validationFailedCount = validationSummary.failures.length;
 
       if (agentSummary.failures.length > 0 || validationSummary.failures.length > 0) {
         notificationSummary.error = 'Agent runs or output validation completed with failures';
@@ -162,7 +193,7 @@ export class BazaGeneratorApp {
       throw error;
     } finally {
       this.inputSession.close();
-      await notifyTelegram(this.projectDirectory, buildGeneratorTelegramMessage({
+      await this.notifyTelegram(this.projectDirectory, buildGeneratorTelegramMessage({
         ...notificationSummary,
         durationMilliseconds: Date.now() - startedAt,
       }), {
