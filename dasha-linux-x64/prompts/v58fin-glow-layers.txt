@@ -1,0 +1,1399 @@
+# PROMPT TEMPLATE v58.2FIX-FIN — Multi-Framework Architecture for Site Generation
+# Design Theme: GLOW LAYERS
+# Multi-Framework/Vite/TS Multi-Page Site + Hard Build Gate
+
+================================================================
+INPUTS (FILL ALL BEFORE GENERATION)
+================================================================
+
+## CORE SETTINGS
+- DOMAIN: {{DOMAIN}}
+- BRAND_NAME: {{BRAND_NAME}}
+- LOCALE: {{LOCALE}}
+- COUNTRY_CODE: {{COUNTRY_CODE}}
+- CURRENCY: {{CURRENCY}}
+- PHONE_PREFIX: {{PHONE_PREFIX}}
+
+## BUSINESS TYPE
+- INDUSTRY: {{INDUSTRY}}
+- BUSINESS_MODEL: {{BUSINESS_MODEL}}
+- PRIMARY_OFFERING: {{PRIMARY_OFFERING}}
+- SECONDARY_OFFERINGS: {{SECONDARY_OFFERINGS}}
+
+## CONTENT PARAMETERS
+- TONE: {{TONE}}
+- FORMALITY: {{FORMALITY}}
+- TARGET_AUDIENCE: {{TARGET_AUDIENCE}}
+- KEY_PAIN_POINTS: {{KEY_PAIN_POINTS}}
+- UNIQUE_VALUE_PROPS: {{UNIQUE_VALUE_PROPS}}
+
+## ITEMS DATA (products/services/courses/etc)
+- ITEM_TYPE_SINGULAR: {{ITEM_TYPE_SINGULAR}}
+- ITEM_TYPE_PLURAL: {{ITEM_TYPE_PLURAL}}
+- ITEM_COUNT: {{ITEM_COUNT}}
+- ITEM_CATEGORIES: {{ITEM_CATEGORIES}}
+- FILTER_OPTIONS: {{FILTER_OPTIONS}}
+- PRICE_RANGE: {{PRICE_RANGE}}
+
+## PAGE CUSTOMIZATION
+- CUSTOM_PAGE_TITLE: {{CUSTOM_PAGE_TITLE}}
+- CUSTOM_PAGE_SECTIONS: {{CUSTOM_PAGE_SECTIONS}}
+
+## TEAM & SOCIAL PROOF
+- TEAM_SIZE: {{TEAM_SIZE}}
+- TEAM_ROLES: {{TEAM_ROLES}}
+- TESTIMONIAL_COUNT: {{TESTIMONIAL_COUNT}}
+- CLIENT_TYPES: {{CLIENT_TYPES}}
+
+## VARIATION CONTROLS
+- UI_LIBRARY: {{UI_LIBRARY}}
+  Options depend on FRAMEWORK (see A1). If "auto" — model picks one that fits {{INDUSTRY}} and {{FRAMEWORK}} best.
+- SITE_VARIANT_SEED: {{SITE_VARIANT_SEED}}
+  Any word/phrase/number. Use it as entropy to vary all randomized choices.
+  Different seeds MUST produce different page sets, layouts, section orders, and UI patterns.
+
+## TECH STACK CONTROLS
+- FRAMEWORK: {{FRAMEWORK}}
+  Options: "react" | "vue" | "svelte" | "astro"
+  If "auto" — model picks based on seed.
+- CSS_APPROACH: {{CSS_APPROACH}}
+  Options: "tailwind" | "css-modules" | "scss-bem" | "plain-css"
+  If "auto" — model picks based on seed and FRAMEWORK.
+  Compatibility: css-modules works with react/vue/svelte. scss-bem and plain-css work with all.
+
+## TYPOGRAPHY
+- FONT_HEADING: {{FONT_HEADING}}
+  Font family for headings. If "auto" — pick from FONT PAIR POOL based on seed.
+- FONT_BODY: {{FONT_BODY}}
+  Font family for body text. If "auto" — pick from FONT PAIR POOL based on seed.
+
+## LAYOUT
+- LAYOUT_ARCHETYPE: {{LAYOUT_ARCHETYPE}}
+  Options: "corporate" | "magazine" | "minimal" | "landing" | "card-based" | "dashboard"
+  If "auto" — model picks based on seed and industry.
+
+================================================================
+ABSOLUTE RULES (NON-NEGOTIABLE)
+================================================================
+
+1) Project root folder MUST be exactly: /{{DOMAIN}}
+2) Single job only: produce a working production build.
+3) Language: {{LOCALE}} — use appropriate regional tone and expressions.
+4) Images: Unsplash/Pexels with mandatory fallback (see IMAGE RULES below). Unique URLs everywhere — NO repetition.
+5) No deceptive UI patterns (fake urgency, forced actions, system alerts).
+6) No functional payments/checkout. Prices are informational only.
+7) All contact info must be realistic for {{COUNTRY_CODE}}.
+8) The SITE_VARIANT_SEED value MUST influence your randomized choices. Two generations with identical inputs but different seeds must produce visibly different sites (different optional pages, different layouts, different section orders, different UI library if set to auto).
+
+================================================================
+LAYER A: CORE REQUIREMENTS (INVARIANT)
+================================================================
+
+## A1. Tech Stack (MANDATORY)
+
+FRAMEWORK: {{FRAMEWORK}}
+CSS_APPROACH: {{CSS_APPROACH}}
+Build tool: Vite (all frameworks use Vite for build stability, except Astro which uses its own CLI built on Vite)
+
+### If FRAMEWORK = "react":
+- React 18 + Vite + TypeScript
+- react-router-dom for routing (see ROUTING POOL below)
+- Functional components with hooks
+- File extensions: .tsx / .ts
+- Root mount: ReactDOM.createRoot(document.getElementById('root')) — vary the id (use 'root', 'app', 'mount', or brand-slug)
+- UI Library pool: @headlessui/react, @radix-ui/react-*, flowbite-react, @mantine/core, daisyui, pure (none)
+- State: React Context or Zustand (vary with seed)
+
+### If FRAMEWORK = "vue":
+- Vue 3.4+ + Vite + TypeScript
+- vue-router for routing (see ROUTING POOL below)
+- Composition API with <script setup> — NEVER use Options API
+- Single File Components (.vue)
+- Root mount: createApp(App).use(router).mount('#app')
+- UI Library pool: @headlessui/vue, primevue, naive-ui, daisyui, pure (none)
+- State: Pinia or composables (NOT Vuex)
+
+### If FRAMEWORK = "svelte":
+- Svelte 4 + Vite + TypeScript (use @sveltejs/vite-plugin-svelte)
+- svelte-spa-router or tinro for SPA routing
+- Svelte stores for state ($writable, $derived)
+- File extensions: .svelte / .ts
+- Root mount: new App({ target: document.getElementById('app') })
+- UI Library pool: @skeletonlabs/skeleton, flowbite-svelte, daisyui, pure (none)
+- Scoped styles built-in (<style> in .svelte files)
+
+### If FRAMEWORK = "astro":
+- Astro 4 + TypeScript
+- File-based routing: src/pages/*.astro (NO SPA router needed)
+- .astro components for static parts, interactive islands with client:load directive
+- Pick ONE island framework for interactive components (search, filter, accordion): React or Svelte
+- NO SPA — generates separate HTML per page (MPA output)
+- UI Library pool: daisyui, pure (none)
+- CSS: scoped <style> in .astro files, or Tailwind via @astrojs/tailwind
+
+### CSS_APPROACH: {{CSS_APPROACH}}
+
+| Approach | Class pattern | Install | Compatible with |
+|---|---|---|---|
+| tailwind | `bg-blue-500 text-white px-4` | tailwindcss, postcss, autoprefixer | all frameworks |
+| css-modules | `.module.css` -> hashed classes (`header_a3f2`) | built-in (no extra deps) | react, vue, svelte |
+| scss-bem | `.scss` -> BEM naming (`header__nav--active`) | sass (devDependency) | all frameworks |
+| plain-css | global CSS + custom properties `var(--primary)` | none | all frameworks |
+
+RULES:
+- If CSS_APPROACH = "css-modules": DO NOT install Tailwind. Use CSS Modules exclusively.
+- If CSS_APPROACH = "scss-bem": install `sass` as devDependency. Use BEM naming convention.
+- If CSS_APPROACH = "plain-css": use CSS custom properties for theming. NO utility classes.
+- If CSS_APPROACH = "tailwind": install and configure as normal.
+- Document chosen CSS approach in siteConfig.ts.
+
+ROUTING POOL (for SPA frameworks — react, vue, svelte):
+1) HashRouter (#/path) — simplest, works everywhere
+2) BrowserRouter + public/404.html redirect hack (cleaner URLs, works on GitHub Pages)
+3) BrowserRouter + hosting config (_redirects for Netlify: "/* /index.html 200", vercel.json for Vercel)
+Document chosen routing strategy in siteConfig.ts.
+
+- Data in TS modules: src/data/
+- Responsive design (mobile-first)
+- UI Library: {{UI_LIBRARY}} (install as dependency, use its components throughout)
+
+FORBIDDEN:
+- NO Next.js, Nuxt, SvelteKit, Remix, Gatsby (SSR/meta-frameworks)
+- NO SSR/SSG (except Astro which is static by design)
+
+## A2. Image Fallback System (MANDATORY)
+
+Create a reusable component in the framework's syntax:
+- React: src/components/ImageWithFallback.tsx
+- Vue: src/components/ImageWithFallback.vue
+- Svelte: src/components/ImageWithFallback.svelte
+- Astro: src/components/ImageWithFallback.astro
+
+Props interface (adapt to framework syntax):
+```typescript
+interface ImageWithFallbackProps {
+  src: string;
+  alt: string;
+  className?: string;
+  fallbackType?: 'gradient' | 'pattern' | 'icon';
+  aspectRatio?: string;
+}
+```
+
+RULES:
+1. Use Unsplash source URLs: https://images.unsplash.com/photo-{ID}?w=800&h=600&fit=crop
+2. EVERY <img> in the project MUST use ImageWithFallback — no raw <img> tags.
+3. On image load error, the component MUST:
+   - Hide the broken image
+   - Show a styled CSS gradient placeholder using site accent colors
+   - OR show an inline SVG geometric pattern
+   - NEVER show a broken image icon
+4. Hero section backgrounds: use CSS gradients as the base layer, with optional image overlay via background-image. The section must look complete even if the image fails to load.
+5. Avatar images: use https://ui-avatars.com/api/?name=First+Last&background=random as primary source, with SVG initials circle as fallback.
+6. Centralize all image URLs in src/data/images.ts. Every URL unique (no repetition). Alt text in {{LOCALE}}.
+
+IMAGE UNIQUENESS RULES (CRITICAL):
+LLMs tend to reuse the same popular Unsplash photo IDs across different sites.
+The following photo IDs are BANNED — they have been overused:
+- photo-1552664730-d307ca884978 (team meeting)
+- photo-1517694712202-14dd9538aa97 (laptop code)
+- photo-1522071820081-009f0129c71c (team collaboration)
+- photo-1504384308090-c894fdcc538d (code on screen)
+- photo-1551434678-e076c223a692 (developer working)
+- photo-1523240795612-9a054b0db644 (students studying)
+- photo-1460925895917-afdab827c52f (workspace)
+- photo-1519389950473-47ba0277781c (office)
+- photo-1498050108023-c5249f4df085 (code screen)
+- photo-1531482615713-2afd69097998 (workshop)
+- photo-1515378960530-7c0da6231fb1 (typing keyboard)
+- photo-1542744173-8e7e53415bb0 (meeting room)
+- photo-1553877522-43269d4ea984 (whiteboard)
+- photo-1573497620053-ea5300f94f21 (portrait)
+NEVER use any of these IDs. Find different photos.
+
+HOW TO FIND UNIQUE PHOTOS:
+- Use INDUSTRY-SPECIFIC search terms, not generic ("coding", "team", "office")
+- For {{INDUSTRY}}: think of specific tools, environments, materials, settings unique to that field
+- Use Unsplash photo IDs that include SPECIFIC subject matter matching {{PRIMARY_OFFERING}}
+- Prefer photos with unusual composition, lighting, or angles — NOT standard stock-photo poses
+- Mix photo styles: some overhead shots, some close-ups, some environmental, some abstract
+- For hero images: consider using CSS-only backgrounds (gradients, patterns) instead of stock photos
+- Generate image search keywords from {{BRAND_NAME}} + {{INDUSTRY}} + {{COUNTRY_CODE}} for region-relevant imagery
+
+## A3. Data Structures
+
+### src/data/items.ts ({{ITEM_TYPE_PLURAL}})
+```typescript
+interface Item {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  description: string;
+  features: string[]; // 5-7
+  outcomes: string[]; // 3
+  responsible: {
+    name: string;
+    bio: string;
+    avatarUrl: string;
+  };
+  imageUrl: string;
+  duration: string;
+  category: string;
+  format: string;
+  price: {
+    amount: number;
+    currency: string; // {{CURRENCY}}
+  };
+  faq: Array<{ q: string; a: string }>; // 3
+  reviews: Array<{
+    name: string;
+    role?: string;       // OPTIONAL -- omit for ~30%
+    company?: string;    // OPTIONAL -- omit for ~30%
+    text: string;
+    rating?: number;     // OPTIONAL
+    source?: string;     // OPTIONAL -- "Google", "Trustpilot", "survey"
+  }>; // 1-4 (vary count per item)
+}
+```
+
+### src/data/blog.ts (only if BLOG page is selected)
+```typescript
+interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string; // 3-4 paragraphs
+  author: string;
+  date: string; // realistic 2024-2025
+  tags: string[];
+  heroImageUrl: string;
+}
+```
+
+### src/data/legal.ts (REQUIRED)
+```typescript
+interface LegalSection {
+  id: string;
+  title: string;
+  content: string;
+}
+
+interface LegalPage {
+  title: string;
+  lastUpdated: string; // ISO date
+  sections: LegalSection[];
+  contactEmail: string;
+}
+
+export const termsOfService: LegalPage;
+export const privacyPolicy: LegalPage;
+export const cookiePolicy: LegalPage;
+export const refundPolicy: LegalPage; // Required if prices exist
+```
+
+### src/data/siteConfig.ts (REQUIRED)
+```typescript
+interface SiteConfig {
+  framework: string;           // react | vue | svelte | astro
+  cssApproach: string;         // tailwind | css-modules | scss-bem | plain-css
+  uiLibrary: string;           // which UI library was chosen
+  fontHeading: string;         // heading font family
+  fontBody: string;            // body font family
+  layoutArchetype: string;     // corporate | magazine | minimal | landing | card-based | dashboard
+  routingStrategy: string;     // hash | browser | file-based
+  selectedOptionalPages: string[]; // which optional pages were picked
+  variantSeed: string;         // the seed used for this generation
+}
+```
+Document ALL randomized choices here so they are traceable.
+
+## A4. SEO & Hygiene
+
+Create in /{{DOMAIN}}:
+- public/robots.txt (Allow all + sitemap link)
+- public/sitemap.xml (all routes including legal pages, hash format if HashRouter)
+- public/site.webmanifest
+- public/favicon.svg (original, matches design theme — geometric shapes, clean lines)
+
+index.html must include:
+- Title + description meta
+- Canonical URL
+- Open Graph tags
+- Twitter Card tags
+
+JSON-LD schemas:
+- Organization (brand, {{COUNTRY_CODE}} address, {{PHONE_PREFIX}} phone)
+- {{ITEM_TYPE_SINGULAR}} (for each item)
+- Article (for blog posts, if blog page selected)
+
+Include 404 NotFound route.
+
+## A5. Copywriting Rules (Ad Platform Compliant)
+
+### FORBIDDEN (triggers ad rejection)
+
+NEVER use:
+- "Guaranteed results" / "We guarantee..."
+- Income/earnings promises ("Make $X", "Earn $X")
+- "Secrets of..." / "What they don't tell you..."
+- Fake scarcity ("Last spot!", "Only X left!")
+- Fake urgency ("Today only!", "Offer ends in...")
+- "Effortless" / "Easy money" / "Quick results"
+- "Exclusive method" / "Proven system"
+- "100% effective" / absolute claims
+- Countdown timers for fake deadlines
+- Testimonials with specific income/result numbers
+- Before/after with unrealistic transformations
+- "Sign up now before it's too late"
+- Fake celebrity endorsements
+- "Thousands already succeeded"
+- "Change your life" / life-changing promises
+- Superlatives without proof ("Best", "Leading", "#1")
+- Pressure tactics / FOMO manipulation
+
+### FINANCIAL SERVICES TRIGGERS (Google Ads — location-specific financial policy)
+
+When generating ALL content (headings, dropdowns, partner names, testimonials, stats, footers, nav labels, alt text):
+
+NEVER use these words/phrases. Use the replacement instead:
+
+| Forbidden | Use instead |
+|---|---|
+| finance / financial (non-legal context) | operational / business |
+| trade finance | cross-org workflow |
+| insurance / insurance claims | risk coverage / incident records |
+| settlement / settlements | reconciliation / sync |
+| custodial | secure-storage |
+| regulated markets | enterprise markets |
+| regulated industry | compliance-aware industry |
+| regulator / regulators | external reviewers |
+| compliance (as navigation label or section heading) | Policy links / quality standards |
+| ledger (non-blockchain context) | activity log |
+| FinOps | cloud cost ops |
+| economics (in course/module title) | efficiency |
+| budget (in financial planning context) | allocation |
+| budget ladders | spend tiers |
+| bank / Bank (in partner/client name) | Group / Partners |
+| Web3 | decentralized protocol |
+| Bitcoin / BTC | scriptable assets |
+| custodial integrations | secure key integrations |
+| Hyperledger / Hyperledger Fabric | enterprise distributed ledger |
+| legal stamp | internal approval |
+| legal sign-off | stakeholder sign-off |
+| wiring (payment context, e.g. "wiring tuition") | paying |
+| finance-friendly | procurement-ready |
+
+APPLY TO: all <option> values in dropdowns, all partner/client names, all testimonial text, all heading text, all footer descriptions, all navigation labels.
+
+### COMPLIANT PATTERNS (use these)
+
+Value Proposition:
+- Specific features and what's included
+- Methodology/process transparency
+- Tools/technologies/materials used
+- Team credentials (verifiable style)
+- Time investment required (honest)
+
+Social Proof (realistic):
+- "Trusted by teams at [Company], [Company], [Company]"
+- "Average satisfaction: [varied: 4.3, 4.5, 4.7, 4.8, 9.2/10, 94%]/5 based on [varied: client surveys, Google reviews, internal feedback, Trustpilot]"
+  IMPORTANT: Do NOT use 4.6/5 as default. Vary rating AND scale. Sometimes omit numeric ratings entirely.
+- "X% of clients report [specific, modest outcome]"
+- Reviews focused on EXPERIENCE, not miraculous results
+
+Urgency (legitimate only):
+- Real dates: "Next cohort: March 2025"
+- Real limits: "Limited to 25 participants for quality"
+- Real deadlines: "Registration closes [real date]"
+
+CTAs (clear, not pushy):
+- "View full program" / "Request information" / "Schedule a call"
+- "Download details" / "Get started" / "Learn more"
+- NOT: "Buy now!" / "Don't miss out!" / "Act fast!"
+
+Benefits (process-focused):
+- "You'll work with [specific tools/methods]"
+- "Includes X projects for your portfolio"
+- "Personalized feedback from [credential]"
+- "Certificate of completion"
+
+Pricing:
+- Full price upfront, no hidden fees
+- Installments clearly totaled
+- What's NOT included stated
+- Refund policy in dedicated Refund Policy page
+
+### TESTIMONIAL RULES
+
+Each testimonial MUST:
+- Focus on EXPERIENCE, not RESULTS
+- Sound human (not all glowing, some constructive notes OK)
+
+TESTIMONIAL FORMAT POOL (use 1+ formats per site, mix on same page):
+a) Full: name + role + company
+b) Minimal: first name + city only
+c) Platform-style: name + rating stars + verified badge
+d) Anonymous: quote + "Client in [industry]"
+e) Mixed: 2+ formats on same page
+
+TESTIMONIAL VOICE VARIATION:
+- LENGTH: Mix 1-sentence, 2-sentence, 3-sentence on same page. NEVER all same length.
+- TONE: Some formal, some casual, some technical/specific
+- STRUCTURE:
+  a) Positive + minor criticism at end
+  b) Problem -> solution story
+  c) Descriptive experience
+  d) Mentions specific feature/person
+  e) One short punchy sentence
+- At least 1 per site with mild reservation
+- NEVER have all testimonials same length or structure
+
+GOOD examples (write NEW text each time, NEVER copy these verbatim):
+- "The [specific module name] gave me a repeatable process for [specific task]. I still use the template from week 3." — [Name], [Role]
+- "Clear material, though the [specific topic] section felt compressed. Mentor notes on my code were the standout." — [Name]
+- "We ran the [specific exercise] in our team the next sprint. Solid framework." — [Name], [Company]
+
+BAD (NEVER write these):
+- "Thanks to this I doubled my [metric] in 3 months! Best decision ever, 100% recommended!!!"
+- "The course helped me structure my approach better. The practical exercises were the most valuable part."
+- Any generic praise without mentioning specific course content from THIS site
+
+### FAQ RULES
+- Answer real objections honestly
+- NOT disguised sales pitches
+- Include at least ONE limitation disclosure
+- Be specific about what's NOT included
+
+## A6. Cookie Consent (REQUIRED)
+
+- Banner with Accept / Reject buttons
+- Persist in localStorage
+- Rejecting does NOT block site
+- Link to Cookie Policy page (not generic Legal)
+- Style matches the selected design theme
+
+## A7. Legal Pages Requirements
+
+### General Rules for ALL Legal Pages
+- Each policy MUST be on its own dedicated route
+- Professional legal formatting (numbered sections, clear headings)
+- Language: {{LOCALE}} (legal terminology appropriate to region)
+- Last updated date clearly visible at top
+- Contact information at bottom of each page
+- Cross-links between related policies
+- Scroll-to-top functionality
+- Print-friendly styling
+
+### Footer Legal Links (REQUIRED)
+Footer must include links to ALL legal pages. RANDOMIZE order AND names based on seed:
+
+ORDER POOL:
+a) Privacy | Terms | Cookies | Refund
+b) Terms & Conditions | Privacy | Refund | Cookie Preferences
+c) Single "Legal" link -> page with tab navigation for all policies
+d) Privacy Notice | Cookie Settings | Terms of Use | Refund & Cancellation
+
+NAME VARIANTS (pick one per policy based on seed):
+- "Terms of Service" / "Terms & Conditions" / "Terms of Use" / "General Terms"
+- "Privacy Policy" / "Privacy Notice" / "Data Protection" / "Privacy"
+- "Cookie Policy" / "Cookie Preferences" / "Cookie Settings" / "Cookies"
+- "Refund Policy" / "Refund & Cancellation" / "Returns & Refunds" / "Money-Back Policy"
+
+BANNED: Always using Terms, Privacy, Cookie, Refund in that exact order with those exact names.
+
+### Legal Page Minimum Content Length
+- Terms of Service: minimum 8 sections
+- Privacy Policy: minimum 10 sections
+- Cookie Policy: minimum 6 sections
+- Refund Policy: minimum 7 sections
+
+### Refund Policy Trigger Condition
+IF site contains ANY of the following:
+- {{PRICE_RANGE}} is defined
+- Pricing page exists
+- {{ITEM_TYPE_PLURAL}} have prices
+- Any mention of payment/purchase/buy
+THEN Refund Policy page is MANDATORY
+
+### Legal Content Must Be Region-Appropriate
+- Reference applicable laws for {{COUNTRY_CODE}}
+- EU sites: GDPR compliance language
+- US sites: CCPA/state law references where applicable
+- Include jurisdiction-specific consumer rights
+
+================================================================
+LAYER B: STRUCTURE (RANDOMIZED PER GENERATION)
+================================================================
+
+CRITICAL: Use {{SITE_VARIANT_SEED}} as entropy for ALL choices in this layer.
+Different seeds = different structural decisions. Document all choices in src/data/siteConfig.ts.
+
+## B1. Page Pool System
+
+### MANDATORY pages (always present):
+
+1) HOME
+2) {{ITEM_TYPE_PLURAL}} LISTING
+3) {{ITEM_TYPE_SINGULAR}} DETAIL (dynamic route for each item)
+4) CONTACT
+5) TERMS OF SERVICE (/terms)
+6) PRIVACY POLICY (/privacy)
+7) COOKIE POLICY (/cookies)
+8) REFUND POLICY (/refund) — mandatory if prices exist
+9) 404 NOT FOUND
+
+### OPTIONAL pages — pick 3-5 based on {{INDUSTRY}}/{{BUSINESS_MODEL}} and {{SITE_VARIANT_SEED}}:
+
+| Page | Route | Best for |
+|---|---|---|
+| ABOUT (team, story, timeline) | /about | service businesses, agencies |
+| PRICING (tiers comparison) | /pricing | SaaS, courses, subscriptions |
+| BLOG / NEWS (listing + detail) | /blog, /blog/:slug | content-driven, SEO |
+| FAQ (standalone) | /faq | complex products, services |
+| PORTFOLIO / CASE STUDIES | /portfolio | agencies, freelancers |
+| TESTIMONIALS / REVIEWS | /testimonials | high-trust industries |
+| PARTNERS / CLIENTS | /partners | B2B, enterprise |
+| CAREERS / JOBS | /careers | growing companies |
+| CUSTOM PAGE: "{{CUSTOM_PAGE_TITLE}}" | /{{custom-slug}} | as specified by user |
+| HOW IT WORKS / PROCESS | /how-it-works | complex services, SaaS |
+| COMPARISON (vs competitors or plans) | /compare | competitive markets |
+| RESOURCES / DOWNLOADS | /resources | education, SaaS |
+| EVENTS / WEBINARS | /events | community-driven, education |
+
+INSTRUCTION TO MODEL:
+"Pick 3-5 optional pages that make the most sense for {{INDUSTRY}} / {{BUSINESS_MODEL}}.
+Do NOT always pick the same ones — use {{SITE_VARIANT_SEED}} to vary your selection.
+If {{CUSTOM_PAGE_TITLE}} is provided, it counts as one of the optional picks.
+List chosen pages in src/data/siteConfig.ts."
+
+### Mandatory page content specifications:
+
+HOME — see section pool B3.
+{{ITEM_TYPE_PLURAL}} LISTING — text search, filters ({{FILTER_OPTIONS}}), {{ITEM_COUNT}} items with realistic data.
+{{ITEM_TYPE_SINGULAR}} DETAIL — full description, features (5-7), outcomes (3), responsible person, cover image, duration/timeline, category, format, price in {{CURRENCY}}, FAQ accordion (3, one with limitation), reviews (2-3 experience-focused).
+CONTACT — form (Name, Email, Company optional, Message), address in {{COUNTRY_CODE}}, phone {{PHONE_PREFIX}} + number, map placeholder.
+TERMS OF SERVICE — full legal text: acceptance, responsibilities, IP rights, liability limits, governing law ({{COUNTRY_CODE}}), dispute resolution, termination, modifications. Min 8 sections.
+PRIVACY POLICY — full legal text: data controller, data types, purpose, legal basis, retention, third-party sharing, user rights, international transfers, security, children's privacy, policy changes. Min 10 sections.
+COOKIE POLICY — full legal text: what cookies are, types used, cookies table (name/purpose/duration/provider), manage/disable, browser instructions, third-party cookies, impact of disabling. Min 6 sections. Link to Privacy Policy.
+REFUND POLICY — full legal text: eligibility, timeframe (14 days), full/partial conditions, non-refundable items, process steps, processing time, refund method, contact, cancellation, exceptions. Min 7 sections. Consumer rights under {{COUNTRY_CODE}} law.
+404 — custom styled, link back to Home, popular links or search suggestion.
+
+### Optional page content specifications:
+
+ABOUT — brand story (specific, not generic), {{TEAM_SIZE}} team members with {{TEAM_ROLES}}, 3-4 principles/values, timeline with 3 realistic milestones.
+PRICING — 2-4 tiers (NOT always 3), comparison table, team/volume benefits, CTA to Contact (no checkout), link to Refund Policy.
+TIER NAME SETS (pick 1 based on seed):
+a) Basic / Growth / Scale
+b) Solo / Team / Business
+c) Essentials / Advanced / Premium
+d) Individual / Studio / Agency
+e) Lite / Standard / Professional / Ultimate (4 tiers)
+f) Monthly / Quarterly (time-based, not feature-based)
+g) [INDUSTRY-SPECIFIC names matching {{INDUSTRY}}]
+h) Only 2 tiers: "Standard / Premium" or "Personal / Business"
+BANNED: "Starter / Professional / Enterprise"
+BLOG / NEWS — listing with 4-6 posts, detail view with full content (3-4 paragraphs per post), author, date, tags.
+FAQ — 8-12 questions grouped by category, at least 1 limitation disclosure.
+PORTFOLIO / CASE STUDIES — 4-6 case studies with title, client industry, challenge, solution, outcome.
+TESTIMONIALS / REVIEWS — 6-8 testimonials following testimonial rules from A5.
+PARTNERS / CLIENTS — logo grid, partnership tiers or descriptions, CTA.
+CAREERS / JOBS — 3-5 open positions with title, description, requirements, benefits, application CTA.
+CUSTOM PAGE — introduction section, {{CUSTOM_PAGE_SECTIONS}} (3 distinct sections), include diagram/schema/visual.
+HOW IT WORKS — 4-6 step process, visual flow, before/after comparison of workflow.
+COMPARISON — feature matrix, 3 options compared, highlight recommended.
+RESOURCES / DOWNLOADS — 4-6 downloadable resources with descriptions, categories.
+EVENTS / WEBINARS — 3-5 upcoming events with date, description, speaker, registration CTA.
+
+## B2. UI Library Selection
+
+If {{UI_LIBRARY}} is "auto" or empty, pick one from the FRAMEWORK-SPECIFIC pool below.
+Use {{SITE_VARIANT_SEED}} to vary selection between generations.
+
+### React UI Libraries:
+| Library | npm package | Characteristics |
+|---|---|---|
+| Pure (none) | — | Fully custom components, maximum control |
+| DaisyUI | daisyui | Pre-built component classes, theme system (requires Tailwind) |
+| Flowbite React | flowbite-react | Rich interactive components, form elements, modals |
+| Headless UI | @headlessui/react | Unstyled accessible primitives + custom styling |
+| Radix UI | @radix-ui/react-* | Unstyled accessible primitives + custom styling |
+| Mantine | @mantine/core | Full component library, hooks, works with any CSS approach |
+
+### Vue UI Libraries:
+| Library | npm package | Characteristics |
+|---|---|---|
+| Pure (none) | — | Fully custom components |
+| DaisyUI | daisyui | Component classes (requires Tailwind) |
+| Headless UI | @headlessui/vue | Unstyled accessible primitives |
+| PrimeVue | primevue | Full component suite, multiple themes |
+| Naive UI | naive-ui | TypeScript-first, tree-shakable, works without Tailwind |
+
+### Svelte UI Libraries:
+| Library | npm package | Characteristics |
+|---|---|---|
+| Pure (none) | — | Fully custom, scoped styles built-in |
+| DaisyUI | daisyui | Component classes (requires Tailwind) |
+| Skeleton | @skeletonlabs/skeleton | Svelte-native component library |
+| Flowbite Svelte | flowbite-svelte | Port of Flowbite for Svelte |
+
+### Astro UI Libraries:
+| Library | npm package | Characteristics |
+|---|---|---|
+| Pure (none) | — | Custom .astro components, scoped styles |
+| DaisyUI | daisyui | Component classes (requires Tailwind) |
+
+RULES:
+- Install the chosen library as a project dependency.
+- Use the library's component patterns for: buttons, cards, modals, dropdowns, accordions, tabs, forms.
+- DaisyUI requires CSS_APPROACH = "tailwind". If CSS_APPROACH is not tailwind, do NOT pick DaisyUI.
+- Document the choice in src/data/siteConfig.ts.
+
+## B3. Section Pools Per Page Type
+
+Instead of fixed sections per page, pick from pools. Vary order. Use {{SITE_VARIANT_SEED}} for entropy.
+
+### HOME — pick 5-7 sections, RANDOMIZE order:
+
+SECTION ORDER RANDOMIZATION (MANDATORY):
+1. Hero is NOT required to be first. Hero position pool:
+   - First (standard)
+   - Second (after a stats bar or short intro text)
+   - Omit hero entirely -- use editorial text opening
+2. After selecting 5-7 sections, assign order:
+   - Hash SITE_VARIANT_SEED to number N
+   - If N even: lead with content section (Stats, Items preview, Value prop), Hero second or mid-page
+   - If N odd: Hero first, but follow with NON-obvious section (Stats, Partners, Blog preview, FAQ mini)
+   - Final section before footer: 50% CTA banner, 50% alternative (Newsletter, FAQ, Partners, Blog)
+3. BANNED ORDER: Hero -> Value Prop -> Process -> Items -> Testimonials -> CTA. If order matches within 4 consecutive sections -- reshuffle.
+
+| Section | Notes |
+|---|---|
+| Hero (MANDATORY) | Pick 1 of 6+ layout variants — see B4 |
+| Value proposition | Key benefits in cards or columns |
+| Process/methodology flow | 3-6 steps (vary with seed). Format pool: numbered list, timeline, flowchart, horizontal stepper, alternating left-right. NOT always numbered circles. |
+| {{ITEM_TYPE_PLURAL}} preview cards | 3-4 featured items |
+| Testimonials | 1-4 testimonial cards, varied formats (see TESTIMONIAL FORMAT POOL) |
+| Stats/numbers banner | 4-6 key metrics |
+| Partners/clients logos | Logo grid or scroll |
+| Team spotlight | 1-2 key team members |
+| Blog preview | 2-3 latest posts (only if Blog page selected) |
+| Video/demo section | Embedded video placeholder or feature demo |
+| Comparison table | Quick feature comparison |
+| FAQ mini-section | 3-4 common questions |
+| Newsletter signup | Email capture with value proposition |
+| Soft CTA banner | Final conversion section |
+
+### {{ITEM_TYPE_PLURAL}} LISTING — pick 3-4 structural features:
+
+| Feature | Notes |
+|---|---|
+| Search bar | Always present |
+| Filter sidebar | Left-side filter panel |
+| Top filter bar | Horizontal filter chips |
+| Grid layout | Standard card grid |
+| List layout | Horizontal card list |
+| Sort dropdown | Price, name, date, popularity |
+| Category tabs | Tab-based category filter |
+| Pagination | Bottom pagination or load-more |
+| Quick view modal | Preview without navigation |
+| Featured/pinned items | Highlighted items at top |
+
+### CONTACT — pick 3-4 elements:
+
+| Element | Notes |
+|---|---|
+| Contact form (MANDATORY) | Name, Email, Company optional, Message |
+| Address block | {{COUNTRY_CODE}} realistic address |
+| Phone block | {{PHONE_PREFIX}} + number |
+| Map placeholder | Embedded map or styled placeholder |
+| Office hours | Business hours display |
+| Department contacts | Multiple contact points |
+| Social links | Social media links |
+| FAQ mini-section | Common contact questions |
+
+## B4. Layout Variant Pools
+
+For key sections, define multiple layout options. Model MUST pick different ones each generation based on {{SITE_VARIANT_SEED}}.
+
+### Hero Layouts (pick 1):
+1) Full-height background with centered text overlay and floating geometric shapes
+2) Asymmetric split: visual/animation left (40%), text right (60%)
+3) Centered minimal: large heading, subtext, dual CTAs, subtle background pattern
+4) Card-based: hero text with overlapping feature preview cards
+5) Video/media background with text overlay and gradient scrim
+6) Dashboard preview: hero text left, product screenshot/mockup right
+
+### Hero Content Structure (pick 1, independent of visual layout):
+A) HEADLINE-DRIVEN: H1 + subtitle + CTA(s)
+B) QUESTION-DRIVEN: Question as H1, answer as subtitle
+C) STAT-DRIVEN: Large number as focal point + supporting headline
+D) TESTIMONIAL-DRIVEN: Client quote as hero text
+E) NARRATIVE-DRIVEN: Two paragraphs, CTA as inline link
+F) MINIMAL: H1 only, scroll indicator
+G) LIST-DRIVEN: H1 + 3 bullets instead of paragraph
+BANNED: Always using H1 + subtitle + two buttons as default hero content.
+
+### Hero CTA Variation (pick 1):
+1) SINGLE CTA: One button only
+2) DUAL: Primary button + secondary text link
+3) CTA + SOCIAL PROOF: Button + trust indicator
+4) NO BUTTON: Inline text link only
+5) INPUT-BASED: Email/search input + submit
+6) TRIPLE MICRO: Three small text links
+BANNED: Always "View [Items]" + "Contact Us" as dual CTAs.
+
+### Item Card Layouts (pick 1):
+1) STANDARD: Image, tag, title, description, price, link
+2) MINIMAL: Title + price only, expand on hover
+3) EDITORIAL: Large image, title overlay, no visible price
+4) LIST ROW: Horizontal -- small image left, text center, price+CTA right
+5) MAGAZINE: Alternating large/small cards, some text-only
+6) DATA TABLE: Compact rows with columns
+
+CARD FIELD VISIBILITY:
+- Price on card (60%) | only on detail page (40%)
+- Category tag: show (50%) | hide (50%)
+- CTA text: "Learn more" | "Details" | "View" | arrow icon | fully clickable card
+BANNED: Image + tag + title + description + price + "Learn more" as default combo.
+
+### Testimonials Layouts (pick 1):
+1) Masonry grid with varied card sizes
+2) Horizontal scroll carousel with peek
+3) Single featured testimonial + smaller grid below
+4) Timeline/conversation style (alternating sides)
+5) Quote cards with large quotation marks, stacked
+
+### Item Listing Layouts (pick 1):
+1) Grid with sidebar filters
+2) Full-width cards with top filter bar
+3) Compact table/list view with grid toggle
+4) Masonry/Pinterest style varied-height cards
+
+### Pricing Layouts (pick 1, if Pricing page selected):
+1) 3-column cards with highlighted recommended tier
+2) Horizontal comparison table with sticky header
+3) Tabbed tiers with detailed feature lists
+4) Slider/toggle between monthly and annual with card layout
+
+### Team Layouts (pick 1, if About page selected):
+1) Card grid with hover reveal bio
+2) Alternating left-right member profiles
+3) Circular avatar carousel with click-to-expand
+4) Org chart style with hierarchy visualization
+
+### FAQ Layouts (pick 1):
+1) Classic accordion with expand/collapse
+2) Two-column categorized with tabs
+3) Search-enabled with live filter
+4) Card grid with flip animation
+
+## B5. CSS Approach Implementation
+
+CSS_APPROACH is set via {{CSS_APPROACH}} input variable. Implementation details per approach:
+
+### If CSS_APPROACH = "tailwind":
+- Install: tailwindcss, postcss, autoprefixer
+- Config: tailwind.config.js with theme colors from Layer C
+- Usage: utility classes inline on elements
+- Dark mode: class strategy (dark:bg-gray-900) or media strategy
+
+### If CSS_APPROACH = "css-modules":
+- NO Tailwind installed. NO utility classes anywhere.
+- Each component gets a co-located .module.css file (e.g., Header.module.css)
+- Import as `import styles from './Header.module.css'` (React) or `<style module>` (Vue)
+- Svelte: use `<style>` scoped styles (native, no modules needed)
+- Class names are auto-hashed at build time — produces unique class fingerprint
+- Theme variables via CSS custom properties in :root
+
+### If CSS_APPROACH = "scss-bem":
+- Install: sass (devDependency)
+- Each component gets a co-located .scss file using BEM naming
+- Pattern: `.block__element--modifier` (e.g., `.header__nav--active`)
+- Shared variables in src/styles/_variables.scss
+- Mixins in src/styles/_mixins.scss
+- Import order: variables -> mixins -> component styles
+
+### If CSS_APPROACH = "plain-css":
+- NO Tailwind, NO Sass, NO CSS Modules.
+- Global stylesheet: src/styles/main.css
+- Theme via CSS custom properties: `:root { --color-primary: #1d4ed8; }`
+- Dark mode: `[data-theme="dark"] { --color-primary: #60a5fa; }`
+- Semantic class names: `.hero`, `.card`, `.nav-link`
+- Component-specific styles in src/styles/components/*.css
+
+Document chosen CSS approach in src/data/siteConfig.ts.
+
+## B7. Navigation Structure Randomization
+
+NAV STRUCTURE POOL:
+1) PRODUCT-FIRST: [Items], [Optional pages], About, Contact. Home = logo only.
+2) STORY-FIRST: About, [Items], [Optional pages], Contact
+3) STANDARD WITH VARIATION: Home, [2-4 varied middle items], Contact as button
+4) GROUPED: Dropdowns -- [Items] dropdown, Company dropdown, Resources dropdown
+5) MINIMAL: Only 3-4 links, rest in footer
+6) CTA-DRIVEN: [Items], [1-2 pages], CTA button instead of Contact
+
+RULES:
+- Home as text link: only 60% of the time (otherwise logo-only home link)
+- Contact as last item: only 70% of the time
+- Nav item count: 3-6 (NOT always 5)
+- BANNED order: Home, [Items], Pricing, About, Contact
+
+## B6. Structural Variation Rules
+
+INSTRUCTION TO MODEL:
+1. Before writing ANY code, decide ALL structural choices based on {{SITE_VARIANT_SEED}}:
+   - FRAMEWORK (if auto): which frontend framework
+   - CSS_APPROACH (if auto): which CSS strategy
+   - LAYOUT_ARCHETYPE (if auto): which layout paradigm
+   - FONT_HEADING / FONT_BODY (if auto): which font pair
+   - Which optional pages to include
+   - Which UI library to use (if auto)
+   - Which layout variant for each section type
+   - Which sections to include on each page and in what order
+2. Document ALL choices in src/data/siteConfig.ts FIRST.
+3. Two sites with the same inputs but different {{SITE_VARIANT_SEED}} MUST differ in:
+   - At least 2 optional pages
+   - Section order on HOME
+   - Layout variant for Hero, Testimonials, and Item Listing
+   - At least 1 different UI library (if both auto)
+   - Different cookie consent text
+   - Different legal link names and order
+   - Different hero content structure
+   - Different page <title> format
+4. Do NOT default to the first option in every list. Spread choices across the full range.
+5. Apply LAYOUT_ARCHETYPE rules from the LAYOUT ARCHETYPE SYSTEM section to all pages.
+
+## B8. Site Differentiation Checklist
+
+Before finalizing, verify ALL of the following. If ANY check FAILS — CHANGE before building.
+
+### Structure checks:
+[ ] Homepage section order is NOT: Hero -> Value Prop -> Process -> Items -> Testimonials -> CTA
+[ ] Process section is NOT exactly 4 numbered circles
+[ ] Testimonials are NOT all same length/structure
+[ ] Nav is NOT: Home, [Items], Pricing, About, Contact in that order
+[ ] Pricing is NOT named Starter/Professional/Enterprise
+[ ] Routing is NOT always HashRouter
+
+### Cookie consent checks:
+[ ] Cookie text is NOT "[BRAND] uses cookies for functionality and analytics."
+[ ] Cookie text is NOT any variation of "We use cookies for [X]. See [Cookie Policy]"
+[ ] Cookie button labels are NOT always "Accept" / "Decline" — vary: Allow/Deny, OK/No thanks, Agree/Skip, Got it/Opt out
+[ ] Cookie dialog aria-label varies — NOT always "Cookie consent"
+
+### Legal link checks:
+[ ] Footer legal links are NOT: Privacy Notice, Cookie Settings, Terms of Use, Refund & Cancellation (in that order)
+[ ] Legal link ORDER is shuffled for this seed
+[ ] Legal link NAMES differ — use varied names from A7 pool
+[ ] Footer column heading is NOT always "Legal" — vary: Policies, Compliance, Fine print, Information, etc.
+
+### Hero checks:
+[ ] Hero H1 is NOT a question format ("Need X?", "Ready to Y?", "Want to Z?") — use other formats from B4
+[ ] Hero does NOT have exactly 2 CTA buttons ("View [items]" + "Request information")
+[ ] Hero CTA text varies from B4 Hero CTA pool
+
+### Testimonial checks:
+[ ] NO testimonial contains "helped me structure my approach better"
+[ ] NO testimonial contains "practical exercises were the most valuable part"
+[ ] NO testimonial contains "Would have liked more time on [topic]"
+[ ] Each testimonial mentions SPECIFIC details unique to THIS site's {{ITEM_TYPE_PLURAL}}
+[ ] At least one testimonial has a non-standard structure (not all are quote + name)
+
+### CTA section checks:
+[ ] Final CTA does NOT say "Next cohort: [Month Year]"
+[ ] Final CTA does NOT say "Limited to 25 participants per cohort for quality"
+[ ] The number 25 does NOT appear as a participant/seat cap anywhere
+[ ] CTA approach varies — not always "Schedule a call" + "View pricing"
+
+### Stats section checks:
+[ ] Stats section does NOT use exactly 4 metrics
+[ ] Stats do NOT follow exact pattern: [item count] + satisfaction + participants + mentors
+[ ] No "4.6/5" or "4.7/5" as default satisfaction — vary score AND scale format
+[ ] Metric count varies: use 3, 5, or 6 metrics — NOT always 4
+
+### Content pattern checks:
+[ ] Value proposition heading is NOT "What you get" or "What we offer"
+[ ] Process heading is NOT "How it works" or "How we teach"
+[ ] Page <title> does NOT follow "BRAND — Topic Courses" format — vary per TITLE FORMAT POOL
+[ ] Footer tagline is NOT "[description]. Based in [city]."
+[ ] Copyright text varies — not always "© [year] [BRAND]. All rights reserved."
+
+### Code/tech checks:
+[ ] Root element id varies — NOT always "root" (use 'app', 'mount', 'site', or brand-slug)
+[ ] HTML <body> does NOT have class="dark" as hardcoded default — use data-theme or prefers-color-scheme
+[ ] localStorage keys are BRAND-prefixed — NOT generic "theme" or "cookie_consent"
+[ ] Image alt text is descriptive per image — NOT generic "Course cover image" for all
+
+### Image checks:
+[ ] NONE of the banned Unsplash photo IDs from A2 are used
+[ ] No two images on the site share the same Unsplash photo ID
+[ ] Hero image is NOT a generic "team at laptops" stock photo
+[ ] Images match the specific {{INDUSTRY}} — not generic office/coding shots
+
+### Title format pool (pick 1 based on seed):
+a) "BRAND — Topic description"
+b) "Topic Training | BRAND"
+c) "BRAND: Topic in COUNTRY"
+d) "BRAND"  (brand only, no description)
+e) "Topic by BRAND — CITY"
+f) "BRAND — short tagline"
+
+
+================================================================
+
+>>> TO CHANGE THE VISUAL DESIGN: Replace this entire section (LAYER C) with a different theme.
+>>> The site structure (Layer B) and core requirements (Layer A) remain unchanged.
+
+## C1. Color Palette — GLOW LAYERS
+Layered inner light — depth created through stacked radiant glow:
+- Background: deep dark base — near-black #0f0728 / #1a0a3a / #0d0520 (vary per seed)
+- Glowing accent layers (used as radial-gradient overlays at 8-25% opacity per layer):
+  - Violet #7c3aed
+  - Pink #ec4899
+  - Electric blue #2563eb
+- Each section has its own glow combination: violet+pink, pink+blue, blue+violet (rotate)
+- Primary text: pale lavender #ede9fe (primary) and white #ffffff (emphasis)
+- Secondary text: rgba(237,233,254,0.7) — slightly dimmed lavender
+- Accent: violet for links (default), pink for CTAs, blue for highlights — vary by section
+- Borders: 1px rgba(124,58,237,0.3) — subtle glowing edges
+- Translucent elements: rgba(15,7,40,0.8) backdrop — the glow bleeds through
+
+## C2. Typography — GLOW LAYERS
+Clean modern grotesque — type must be clear to balance the glow:
+- Headings: Space Grotesk, Outfit, or Urbanist — 40-64px, weight 400-600 (NOT heavy — glow is visual)
+  Glow on headings: text-shadow: 0 0 24px rgba(124,58,237,0.5), 0 0 48px rgba(124,58,237,0.25)
+  (vary glow color per section: violet/pink/blue matching section accent)
+- Subheadings: same clean family, 400 weight, pale lavender
+- Body: same clean family, 400 — 15-16px, line-height 1.8, pale lavender #ede9fe
+- Labels/nav: 12-13px, letter-spacing 1.5px, uppercase optional, pale lavender or accent
+- Numbers/stats: large, 400-500 weight, accent color with text-glow
+
+KEY RULE: Type is clean and precise — the glow creates the visual richness. Do NOT use heavy weights that compete with glow. Balance is: minimal typography + maximal glow.
+
+## C3. Card Styles — GLOW LAYERS
+Layered glow cards — multiple light sources create depth:
+- Background: rgba(15,7,40,0.7) — translucent deep dark, glow visible through
+- Border: 1px solid rgba(124,58,237,0.3) — glowing edge, very subtle
+- Border-radius: 16-20px
+- Shadow: MULTIPLE layers (this is the signature of GLOW LAYERS theme):
+  box-shadow:
+    inset 0 0 20px rgba(124,58,237,0.08),   /* inner violet glow */
+    0 0 40px rgba(124,58,237,0.06),          /* outer halo */
+    0 8px 32px rgba(0,0,0,0.5)              /* depth shadow */
+  Vary glow color per section (violet/pink/blue)
+- Hover: glow BLOOMS — outer halo spreads and brightens:
+  box-shadow:
+    inset 0 0 30px rgba(124,58,237,0.15),
+    0 0 60px rgba(124,58,237,0.15),
+    0 12px 40px rgba(0,0,0,0.6)
+  transition: box-shadow 200ms ease
+- Backdrop-filter: blur(8px) — background glow bleeds through card
+
+## C4. Button Styles — GLOW LAYERS
+Glowing CTA buttons — light emanates from within:
+- Primary: solid color fill (violet #7c3aed or pink #ec4899 — vary by section) + heavy glow
+  box-shadow: 0 0 20px rgba(124,58,237,0.5), 0 4px 16px rgba(124,58,237,0.3)
+  White text, border-radius 8px, letter-spacing 0.5px, weight 500
+  Hover: glow blooms (shadow spread doubles, brightness +10%), 200ms ease
+- Ghost: transparent fill, 1px rgba(124,58,237,0.5) border, pale lavender text + subtle glow on border
+  Hover: border brightens (1px rgba(124,58,237,0.9)), faint inner glow appears
+- Padding: px-8 py-3 to px-10 py-3.5
+- Feel: a glowing rune — illuminated from within, powerful but controlled
+
+## C5. Section Spacing — GLOW LAYERS
+Layered depth — sections stack like glowing planes:
+- Vertical padding: py-20 to py-28 — generous dark space lets glow breathe
+- Max-width: max-w-5xl — focused, not overwhelming
+- Section halos: each section has its own subtle radial glow background
+  (CSS radial-gradient at center, 6-12% opacity, section's accent color)
+- Between sections: overlapping glow halos create perceived depth and layering
+- Text blocks: max-w-2xl (focused columns) or max-w-prose
+
+## C6. Decorative Elements — GLOW LAYERS
+Include 2-3 glow-specific decorations:
+- Radial glow orbs: CSS radial-gradient blobs (position: absolute) in theme colors at 6-12% opacity
+  Multiple per page, different sizes (200-600px diameter), slowly float and pulse:
+  @keyframes glow-float { 0%,100% { transform: translate(0,0) scale(1) } 50% { transform: translate(20px,-15px) scale(1.05) } }
+  Animation: 8-12s ease-in-out infinite, stagger between orbs
+- Layered glow on section backgrounds: additional radial-gradient from section center
+  background: radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.08) 0%, transparent 70%)
+- Pulsing animation on decorative elements:
+  @keyframes glow-pulse { 0%,100% { opacity: 0.6 } 50% { opacity: 1 } }
+  3-5s ease-in-out infinite on background orbs
+- NO: warm colors, bright whites, light backgrounds, hard geometry
+
+## C7. Animation Style — GLOW LAYERS
+Layer bloom — glow expands and contracts:
+- Section entrance: glow BLOOMS on scroll — box-shadow spread transitions from 0 to full value (800ms)
+  This means sections start with no outer glow and their halo expands as they enter viewport
+- Radial orbs: slow continuous float + pulse (see C6 — always running, never paused)
+- Hover: glow blooms instantly — shadow increases dramatically within 200ms
+- Stagger: 180-250ms — contemplative, measured rhythm matching the glow's weight
+- Overall feel: like standing in a dark room as lights gradually warm — slow, intentional, atmospheric
+
+## C8. Header Style — GLOW LAYERS
+Pick ONE (vary with {{SITE_VARIANT_SEED}}):
+1) Dark with glowing logo line: rgba(15,7,40,0.9) backdrop-filter blur, no border — instead a radial glow emanates from behind the logo mark (CSS radial-gradient positioned at logo)
+2) Glow edge header: solid deep #0f0728 base, 1px violet glow bottom border (box-shadow: 0 1px 0 rgba(124,58,237,0.6), 0 2px 16px rgba(124,58,237,0.2))
+3) Deep transparent with glow reveal: transparent on load, fills to rgba(15,7,40,0.92) on scroll with violet bottom glow border appearing via transition
+
+## C9. Footer Style — GLOW LAYERS
+- Deep dark #0f0728 footer, violet/pink glow top border (1px + subtle outer glow)
+- Pale lavender text, violet/pink glow links (vary per column)
+- {{COUNTRY_CODE}} address, {{PHONE_PREFIX}} phone in pale lavender
+- Legal links section (randomized order and names — see A7 Footer Legal Links)
+
+FOOTER LAYOUT POOL (pick 1 based on seed):
+1) 4-column dark grid with violet-glow column headings and glowing dividers
+2) Centered stacked on deep dark with pink glow rule above copyright
+3) Two-column: brand left with logo glow effect, links right
+4) Single row inline with violet glow separator
+5) Asymmetric glow panel: wide brand column (60%) with subtle radial glow + compact links
+6) Minimal colophon: brand + glow dot + copyright
+
+TAGLINE POOL (pick 1 based on seed):
+1) "[BRAND_NAME] — illuminating [INDUSTRY] for [TARGET_AUDIENCE]."
+2) "Depth you can feel."
+3) "Built for [TARGET_AUDIENCE] who value clarity."
+4) "[One-line mission — specific to industry]"
+5) "[BRAND_NAME]. Glowing from the inside."
+6) No tagline — brand + glow divider + copyright only
+BANNED: "[description] from [COUNTRY_CODE]." pattern
+
+## C10. Cookie Consent Style — GLOW LAYERS
+- Dark card rgba(15,7,40,0.95) with violet glow border (box-shadow glow), pale lavender text, violet-fill CTA button with glow
+
+COOKIE TEXT POOL (pick 1 based on seed):
+1) "Essential cookies keep this site working. Analytics are optional. [Cookie Policy]"
+2) "We store minimal data files by default. Choose what else you allow. [Details]"
+3) "This site sets only required cookies. Analytics need your go-ahead. [Preferences]"
+4) "A small set of cookies runs this site. More data options are your choice. [Policy]"
+5) "Required cookies are active. Everything else waits for your permission. [Cookie Policy]"
+BANNED: "We use cookies for [X]. See [Cookie Policy]" as default pattern.
+
+COOKIE UI POOL (pick 1 based on seed):
+a) Bottom dark bar with violet glow top border (box-shadow + border)
+b) Bottom-left dark glass card with violet glow all-perimeter shadow
+c) Top dark banner slides down with pink glow underline
+d) Bottom-right dark toast with violet left border glow accent
+e) Centered dark modal with full violet glow frame and bloom-in animation (scale 0.9->1 + glow expands)
+
+>>> END OF LAYER C — DESIGN THEME <<<
+
+
+================================================================
+FONT PAIR POOL
+================================================================
+
+FONT_HEADING: {{FONT_HEADING}}
+FONT_BODY: {{FONT_BODY}}
+
+If both are "auto", pick a pair from the pool below based on {{SITE_VARIANT_SEED}}.
+Design themes (Layer C) may specify preferred type category (serif/sans/mono) — if so, pick from that category.
+If FONT_HEADING/FONT_BODY are explicitly set, they OVERRIDE theme defaults.
+
+Install via @fontsource packages (e.g., @fontsource/inter, @fontsource/playfair-display).
+
+### Serif heading + Sans body (12 pairs):
+1) Playfair Display + Inter
+2) Lora + Open Sans
+3) Merriweather + Montserrat
+4) DM Serif Display + DM Sans
+5) Libre Baskerville + Nunito Sans
+6) Cormorant Garamond + Work Sans
+7) Spectral + Karla
+8) Fraunces + Source Sans 3
+9) Bitter + Raleway
+10) Source Serif 4 + Source Sans 3
+11) Noto Serif + Noto Sans
+12) IBM Plex Serif + IBM Plex Sans
+
+### Sans heading + Sans body (10 pairs):
+13) Space Grotesk + Inter
+14) Outfit + Plus Jakarta Sans
+15) Manrope + DM Sans
+16) Sora + Work Sans
+17) Albert Sans + Nunito
+18) Urbanist + Source Sans 3
+19) Figtree + Inter
+20) Instrument Sans + Work Sans
+21) Lexend + Inter
+22) Commissioner + Inter
+
+### Mono heading + Sans body (4 pairs):
+23) Space Mono + Inter
+24) JetBrains Mono + DM Sans
+25) IBM Plex Mono + IBM Plex Sans
+26) Fira Code + Nunito Sans
+
+### Single family (4 options):
+27) Inter (all weights)
+28) DM Sans (all weights)
+29) Plus Jakarta Sans (all weights)
+30) Work Sans (all weights)
+
+================================================================
+LAYOUT ARCHETYPE SYSTEM
+================================================================
+
+LAYOUT_ARCHETYPE: {{LAYOUT_ARCHETYPE}}
+
+The archetype defines the overall page structure, spacing philosophy, and navigation approach.
+All other design decisions (colors, type, decorative elements) come from Layer C theme.
+
+### corporate
+- Top horizontal nav bar (fixed/sticky)
+- Banner hero (full-width background)
+- Content sections in centered container (max-w-6xl to max-w-7xl, ~1280px)
+- 3-column feature grids
+- Multi-column footer (3-4 columns)
+- Section spacing: py-16 to py-24
+
+### magazine
+- Multi-column editorial grid (2-3 columns with varying widths, CSS grid)
+- Pull quotes and large typography callouts
+- Text-heavy layout, images used editorially (not decoratively)
+- Asymmetric layouts — content NOT always centered
+- Thin hairline dividers between sections
+- Narrow content column: max-w-prose (~65ch) for text, wider for media
+- Section spacing: py-20 to py-32
+
+### minimal
+- Maximum whitespace (py-32 to py-48 between sections)
+- Very few elements per viewport height
+- Full-bleed images, large scale
+- Centered narrow text column (max-w-2xl, ~672px)
+- Minimal footer (single row: brand + legal + copyright)
+- Minimal nav (3-4 items max, rest in footer)
+- Section spacing: py-32 to py-48
+
+### landing
+- Single long scroll narrative (no sub-pages for main content)
+- Full-width alternating sections (light/dark backgrounds)
+- Strong CTA sections between every 2-3 content blocks
+- Sticky header with CTA button always visible
+- No sidebar navigation
+- Max-width: 1440px for wide sections, max-w-4xl for text
+- Section spacing: py-20 to py-28
+
+### card-based
+- Everything wrapped in card containers
+- Cards with visible borders, shadows, or backgrounds
+- Grid-heavy layout (2-4 column card grids throughout)
+- Footer as card grid or card strip
+- Nav items may use pill/chip style
+- Max-width: max-w-6xl (~1200px)
+- Section spacing: py-12 to py-20 (tighter, card gaps provide breathing room)
+
+### dashboard
+- Left sidebar navigation (collapsible to icons on mobile)
+- Top bar with breadcrumbs and utility buttons
+- Dense information layout — compact cards, data tables
+- No traditional "hero" — content starts immediately
+- Compact spacing (py-4 to py-8 between content blocks)
+- Max-width: fluid (100% with sidebar offset)
+- Footer: minimal, inline with sidebar
+
+================================================================
+CONTENT UNIQUENESS RULES (MANDATORY)
+================================================================
+
+These rules exist because generated sites tend to produce identical copy. Each rule addresses a
+specific pattern that has been observed repeating across multiple generations.
+
+### Cookie consent text
+NEVER use "[BRAND] uses cookies for functionality and analytics."
+NEVER use "We use cookies for [X]. See [Cookie Policy]"
+Write a genuinely NEW sentence each time. Pool for inspiration:
+- "We store small data files to keep the site working. Details in our [link]."
+- "This website sets essential cookies. Analytics cookies require your opt-in. [link]"
+- "Cookies help deliver our content. Choose your preferences below."
+- "We respect your privacy — only essential cookies are set by default. [link]"
+- "Small text files help us improve this site. You choose what to allow."
+But do NOT copy these examples verbatim — write a new variation each time.
+
+### Legal link names and order
+NEVER use this exact set in this order: Privacy Notice, Cookie Settings, Terms of Use, Refund & Cancellation.
+Each site MUST use different names AND different order from the A7 pools.
+Shuffle BOTH names AND order based on {{SITE_VARIANT_SEED}}.
+
+### Testimonials
+NEVER write testimonials containing any of these phrases:
+- "helped me structure my approach better"
+- "practical exercises were the most valuable part"
+- "Would have liked more time on [topic]"
+- "Best decision ever"
+These have appeared verbatim across multiple sites.
+Each testimonial MUST reference SPECIFIC {{ITEM_TYPE_PLURAL}} names or features from THIS site.
+
+### Hero headline
+NEVER default to question format for all sites ("Need X?", "Ready to Y?", "Want to Z?").
+Use hero content structure variants from B4 pool. Spread across:
+- Statement: "Backend pipelines built with feedback loops"
+- Stat-driven: "400+ engineers trained since 2019"
+- Testimonial-driven: opening with a client quote
+- Narrative: two paragraphs, no big H1 question
+- Minimal: short phrase, no subtitle
+- List-driven: H1 + 3 bullet outcomes
+
+### CTA section
+NEVER use "Next cohort: [Month Year]" + "Limited to 25 participants per cohort for quality".
+Vary CTA approach from this pool:
+- Newsletter/mailing list signup
+- Download syllabus / brochure / PDF
+- Book a demo / consultation call
+- Apply for next intake
+- Join waitlist with email
+- "Enquire about [specific program]"
+Participant caps: vary or omit — use 15, 20, 30, 12, or no cap mentioned.
+
+### Stats section
+NEVER use exactly 4 metrics with this pattern: [item count] + satisfaction + max participants + mentors.
+Vary metric count: 3, 5, or 6 (NOT always 4).
+Vary metrics from: years active, countries served, projects completed, hours of content,
+completion rate, alumni employed, partner organizations, languages, cities, client companies.
+Vary format: some as plain numbers, some as percentages, some with units.
+
+### Section headings
+NEVER use all of these defaults together: "What you get", "How it works", "What participants say", "Common questions".
+Vary heading style: some descriptive, some action-oriented, some single-word, some with dashes/numbers.
+Examples: "Inclusions", "The flow", "From our cohorts", "FAQ", "01 — Process", "Three things we do differently".
+
+### Page <title>
+NEVER use "BRAND — Topic Courses" on every site. See TITLE FORMAT POOL in B8.
+
+================================================================
+GLOBAL ELEMENTS (FUNCTIONAL REQUIREMENTS)
+================================================================
+
+## Header (functional)
+- Logo + nav + dark/light toggle (see DARK MODE TOGGLE PLACEMENT below)
+- Mobile responsive menu (hamburger)
+- Navigation links to all selected pages (see B7 Navigation Structure)
+- Sticky or fixed position
+
+DARK MODE TOGGLE PLACEMENT (pick 1 based on seed):
+1) Header right -- icon button
+2) Footer only -- toggle switch
+3) Floating button bottom-right (FAB)
+4) Inside hamburger menu + footer toggle on desktop
+5) In Settings dropdown in header
+6) No toggle -- prefers-color-scheme only (15% of the time)
+BANNED: Always sun/moon icon in top-right header.
+
+## Footer (functional)
+- Address + phone
+- Secondary navigation
+- Legal links section (randomized -- see A7)
+- Tagline (randomized -- see C9 TAGLINE POOL)
+
+## Features (all required)
+- Dark/Light mode toggle (localStorage with BRAND-prefixed key, e.g., "{{DOMAIN}}_theme")
+- {{ITEM_TYPE_SINGULAR}} search (title + description)
+- Filter by {{FILTER_OPTIONS}}
+- Accordion component (for FAQ sections) — implement in chosen FRAMEWORK syntax
+- Responsive layouts (mobile-first)
+- Hover effects on interactive elements
+- Cookie consent state stored with BRAND-prefixed key (e.g., "{{DOMAIN}}_cookies")
+
+================================================================
+DESIGN VARIATION GUIDELINES
+================================================================
+
+## Visual Cliches to AVOID
+- Perfect 3-column grids everywhere
+- Identical card heights/padding
+- Exact 50/50 hero splits
+- Same icon family in every section
+- Everything perfectly centered
+- Same animation on all elements
+- Stock photo aesthetic (too polished)
+
+## Structural Cliches to AVOID
+- "Hero -> Features -> How it works -> Testimonials -> CTA" exact order on every site
+- Every section with exactly 3 items
+- Perfectly symmetrical everything
+- Identical section structures repeated
+- Same page set every generation
+
+## Text Cliches to AVOID
+- "Welcome to [brand]"
+- "We are leaders in..."
+- "Our team of experts..."
+- "Comprehensive solutions"
+- "Take your X to the next level"
+- "In today's world..."
+- "Digital transformation..."
+- "Synergy" / "Leverage" / "Optimize"
+- "World-class" / "Best-in-class"
+- "Passionate about..."
+
+## INSTEAD DO
+- Vary section order by page purpose and {{SITE_VARIANT_SEED}}
+- Mix 2, 4, 5 item sections (avoid always-3)
+- Use asymmetric layouts
+- Write specific copy for {{INDUSTRY}}, not generic filler
+- Include minor imperfections (one testimonial shorter, etc.)
+- Use unexpected section combinations
+- Break visual rhythm intentionally
+
+================================================================
+BUILD GATE (CRITICAL — MUST EXECUTE)
+================================================================
+
+After writing ALL files:
+
+### For React / Vue / Svelte (SPA):
+```bash
+cd /{{DOMAIN}}
+npm install
+npm run build
+```
+
+### For Astro (MPA):
+```bash
+cd /{{DOMAIN}}
+npm install
+npm run build
+```
+(Astro uses `astro build` via npm script, output goes to dist/ with separate HTML per page)
+
+SUCCESS CRITERIA:
+- npm run build exits code 0
+- /{{DOMAIN}}/dist exists
+- /{{DOMAIN}}/dist contains index.html and assets/ (SPA) or multiple .html files (Astro MPA)
+
+ON ERROR:
+- Print last 200 lines of error
+- Fix code/config/imports/types/deps
+- Re-run npm install && npm run build
+- Repeat until ZERO errors
+
+FINAL STEP — RENAME dist:
+```bash
+cd /{{DOMAIN}}
+mv dist "{{DOMAIN}}"
+```
+
+VERIFY:
+```bash
+ls -la /{{DOMAIN}}
+ls -la /{{DOMAIN}}/{{DOMAIN}}
+```
+
+================================================================
+OUTPUT REQUIREMENTS
+================================================================
+
+- Output ONLY the working project under /{{DOMAIN}}
+- NO README file
+- NO explanations or summaries
+- Final build in /{{DOMAIN}}/{{DOMAIN}}/
+- src/data/siteConfig.ts MUST document all randomized choices:
+  framework, cssApproach, uiLibrary, fontHeading, fontBody, layoutArchetype,
+  routingStrategy, selectedOptionalPages, variantSeed
+
+END.
