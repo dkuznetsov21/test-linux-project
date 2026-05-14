@@ -2,6 +2,8 @@
 
 This project contains an interactive Node.js script that creates a ready-to-use `baza.txt` file and then starts Codex in the generated folder.
 
+This `experimental` branch also includes a faster template workflow. It first builds one domain normally, then reuses that working project skeleton for the remaining domains while agents adapt brand, content, seed-dependent styling, contact data, SEO, and the final build folder.
+
 ## Requirements
 
 - Node.js 20 or newer.
@@ -20,7 +22,7 @@ The script uses `@faker-js/faker` to generate addresses and `world-countries` to
 From the project root:
 
 ```bash
-npm run generate:baza
+npm start
 ```
 
 Or directly:
@@ -28,6 +30,11 @@ Or directly:
 ```bash
 node scripts/generate-baza.mjs
 ```
+
+The first prompt asks which workflow to run:
+
+1. `Run Standard Workflow` - existing behavior; every domain is generated from its full prompt.
+2. `Run Prompt ZIP Fast Template Workflow` - experimental behavior; the first domain is generated from scratch and the remaining domains are adapted from its copied skeleton.
 
 ## What The Script Asks
 
@@ -213,6 +220,40 @@ npm run telegram:test
 ```
 
 The generator sends a notification when Codex has finished and domain agents are about to start. The final generator notification includes status, duration, domain count, agent success/failure counts, validation valid/invalid counts, prompt file, output folder, and error details when available. If Telegram is not configured or Telegram delivery fails, the generator only prints a warning and keeps its normal exit behavior.
+
+## Experimental Fast Template Workflow
+
+Choose `Run Prompt ZIP Fast Template Workflow` to reduce repeated agent work across domains in one run.
+
+The experimental workflow:
+
+1. Generates `baza.txt` and runs Codex exactly like the standard workflow.
+2. Uses the first sorted domain folder as the template domain.
+3. Runs the template domain agent with the normal full prompt.
+4. Validates that the template domain created a non-empty `<template-domain>/<template-domain>/` build folder.
+5. Cleans every remaining domain folder while preserving its own `promt.txt`.
+6. Copies the template site's source/config/assets skeleton into each remaining domain folder.
+7. Skips `promt.txt`, `agent-output.log`, `node_modules`, `dist`, and the template domain's final build folder during skeleton copy.
+8. Runs agents for the remaining domains with a shorter adaptation prompt that says to reuse the skeleton, replace template-domain references, apply the target prompt's brand/content/contact/SEO/theme, and build `./<target-domain>/`.
+9. Validates all final build folders.
+10. Fails the run if adapted source/build files still contain the template domain string.
+
+This mode is intentionally experimental. Keep using `Run Standard Workflow` when each domain needs a fully independent layout or when maximum design uniqueness matters more than speed.
+
+Build the separate experimental Linux release with:
+
+```bash
+npm run build:experimental:linux
+```
+
+It writes:
+
+```text
+experiments/dasha-linux-x64/dasha
+experiments/dasha-linux-x64/README-RUN.txt
+experiments/dasha-linux-x64/prompts/
+experiments/dasha-linux-x64/scripts/baza.txt
+```
 
 ## Template Placeholders
 

@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { buildAddressBlock } from './address-generator.mjs';
 import {
   CODEX_ARGS,
@@ -29,6 +28,18 @@ import {
   ensureTelegramConfig,
   notifyTelegram,
 } from './telegram-notifier.mjs';
+
+function resolveDefaultProjectDirectory() {
+  if (process.pkg) {
+    return path.dirname(process.execPath);
+  }
+
+  if (process.argv[1]) {
+    return path.resolve(path.dirname(process.argv[1]), '..');
+  }
+
+  return process.cwd();
+}
 
 export function buildGeneratorTelegramMessage(summary) {
   return [
@@ -60,8 +71,7 @@ export function buildDomainAgentsStartedTelegramMessage(summary) {
 
 export class BazaGeneratorApp {
   constructor(options = {}) {
-    this.projectDirectory = options.projectDirectory
-      ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+    this.projectDirectory = options.projectDirectory ?? resolveDefaultProjectDirectory();
     this.output = options.output ?? process.stdout;
     this.inputSession = options.inputSession ?? new InputSession();
     this.agentRunner = options.agentRunner;

@@ -2,6 +2,7 @@
 node_modules/
 
 # Generated output and runtime logs
+dist/
 outputs/
 prompt-usage-log.txt
 agent-output.log

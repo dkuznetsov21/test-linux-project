@@ -50,6 +50,25 @@ export function buildAgentPrompt(job, prompt) {
   ].join('\n');
 }
 
+export function buildTemplateAdaptationPrompt(job, prompt, context = {}) {
+  const templateDomain = context.templateDomain ?? 'template domain';
+
+  return [
+    'FAST TEMPLATE ADAPTATION MODE:',
+    `- You are already running inside the outer folder for target domain: ${job.domain}.`,
+    `- A working site skeleton from ${templateDomain} has already been copied into this folder.`,
+    '- Do not recreate the project from scratch. Reuse the existing structure, dependencies, source files, configs, and assets.',
+    `- Replace every visible and metadata reference to ${templateDomain} with ${job.domain}.`,
+    '- Apply the target prompt below: brand, domain, content, phone/address/contact details, SEO/meta, seed-dependent theme, colors, copy, and any requested business details.',
+    `- The final production build must be in ./${job.domain}/ and must not contain ${templateDomain}.`,
+    '- Keep promt.txt and agent-output.log in the current outer domain folder.',
+    '- Run the existing install/build workflow if needed and fix build errors before finishing.',
+    '',
+    'TARGET ORIGINAL PROMPT:',
+    prompt,
+  ].join('\n');
+}
+
 export class ProgressReporter {
   constructor(total, output = process.stdout, intervalMilliseconds = 30000) {
     this.total = total;
@@ -103,9 +122,10 @@ export class DomainAgentRunner {
   constructor(options) {
     this.concurrencyLimit = options.concurrencyLimit;
     this.output = options.output ?? process.stdout;
+    this.promptBuilder = options.promptBuilder ?? buildAgentPrompt;
   }
 
-  runAgentJob(job) {
+  runAgentJob(job, options = {}) {
     return new Promise(async (resolve) => {
       let prompt;
 
@@ -130,7 +150,8 @@ export class DomainAgentRunner {
       }
 
       const startedAt = new Date().toISOString();
-      const agentPrompt = buildAgentPrompt(job, prompt);
+      const promptBuilder = options.promptBuilder ?? job.promptBuilder ?? this.promptBuilder;
+      const agentPrompt = promptBuilder(job, prompt);
       const args = [...AGENT_ARGS_PREFIX, agentPrompt];
 
       try {
@@ -219,6 +240,14 @@ export class DomainAgentRunner {
       throw new Error(`No domain promt.txt files found in ${outputDirectory}`);
     }
 
+    return this.runJobs(jobs);
+  }
+
+  async runJobs(jobs, options = {}) {
+    if (jobs.length === 0) {
+      throw new Error('No domain prompt jobs were provided');
+    }
+
     this.output.write(`Found domain prompt files: ${jobs.length}\n`);
     this.output.write(`Starting Cursor Agent runs with max concurrency ${this.concurrencyLimit}...\n`);
 
@@ -230,7 +259,7 @@ export class DomainAgentRunner {
         return await runWithConcurrency(jobs, this.concurrencyLimit, async (job) => {
           progressReporter.markStarted();
           this.output.write(`[agent] Starting ${job.domain}\n`);
-          const result = await this.runAgentJob(job);
+          const result = await this.runAgentJob(job, options);
           progressReporter.markFinished(result);
 
           this.output.write(`[agent] ${result.ok ? 'Completed' : 'Failed'} ${job.domain}\n`);
